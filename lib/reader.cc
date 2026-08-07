@@ -506,7 +506,11 @@ void Reader::SetRarFormat() {
 
 void Reader::SetRpmFormat() {
   Archive* const a = archive.get();
+#ifdef ARCHIVE_FORMAT_RPM
+  Check(archive_read_support_format_rpm(a));
+#else
   Check(archive_read_support_filter_rpm(a));
+#endif
   Check(archive_read_support_filter_gzip(a));
   Check(archive_read_support_filter_lzip(a));
   Check(archive_read_support_filter_lzma(a));
