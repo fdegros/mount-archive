@@ -308,6 +308,37 @@ def Unmount(mount_point):
         subprocess.run(['umount', '-l', mount_point], check=True)
 
 
+def DetectRealRpmSupport():
+    rpm_path = os.path.join(data_dir, 'real.rpm')
+    if not os.path.exists(rpm_path):
+        return False
+    with tempfile.TemporaryDirectory(dir=tmp_dir_base) as tmp_dir:
+        command = [mount_program, rpm_path, tmp_dir]
+        try:
+            res = subprocess.run(command, capture_output=True, text=True, timeout=2)
+            if res.returncode == 0:
+                Unmount(tmp_dir)
+                return True
+            if "Unrecognized archive format" in res.stderr or "Unrecognized archive format" in res.stdout:
+                return False
+        except subprocess.TimeoutExpired:
+            Unmount(tmp_dir)
+            return True
+        except Exception:
+            return False
+    return False
+
+
+has_real_rpm = DetectRealRpmSupport()
+
+# https://github.com/google/fuse-archive/issues/59
+env = os.environ.copy()
+# MALLOC_PERTURB_ makes lrzip much slower
+# https://github.com/ckolivas/lrzip/issues/266
+if not is_fast and not has_lrzip:
+    env['MALLOC_PERTURB_'] = '170'
+
+
 @contextmanager
 def MountArchive(zip_names, options=[], password='', env=env):
     with tempfile.TemporaryDirectory(dir=tmp_dir_base) as mount_point:
@@ -2526,6 +2557,33 @@ def TestUsage():
             LogError("Mount point does not exist with -q flag")
 
 
+# Tests genuine RPM format parsing and extraction.
+def TestRealRpm():
+    logging.info("Testing real RPM archive (using true RPM format handler)")
+    if not has_real_rpm:
+        logging.info("Skipping real RPM test: real RPM format not supported by this libarchive build")
+        return
+
+    rpm_path = os.path.join(data_dir, 'real.rpm')
+    if not os.path.exists(rpm_path):
+        return
+
+    want_tree = {
+        '.': {'ino': 1, 'mode': 'drwxr-xr-x', 'nlink': 4},
+        'artificial': {'mode': 'drwxr-xr-x'},
+        'artificial/0.bytes': {'mode': '-rw-r--r--', 'mtime': 1580883024000000000, 'size': 0, 'md5': 'd41d8cd98f00b204e9800998ecf8427e'},
+        'github-tags.json': {'mode': '-rw-r--r--', 'mtime': 1597241062000000000, 'size': 853, 'md5': 'b2d7993ed99c65296bf95824c57b4fdc'},
+        'hello.sh': {'mode': '-rwxr-xr-x', 'mtime': 1620022795000000000, 'size': 693, 'md5': '72d710dd3766a67401a79f8d3df3114c'},
+        'non-ascii': {'mode': 'drwxr-xr-x'},
+        'non-ascii/αβ.txt': {'mode': '-rw-r--r--', 'mtime': 1620022605000000000, 'size': 104, 'md5': '3369a4163a436de59e23daedd371b5f0'},
+        'non-ascii/😻.txt': {'mode': '-rw-r--r--', 'mtime': 1620022983000000000, 'size': 151, 'md5': '5d18e0e461374191825c6e7898af5634'},
+        'pjw-thumbnail.png': {'mode': '-rw-r--r--', 'mtime': 1580883024000000000, 'size': 208, 'md5': 'f7017e60a0af6d7ad3128c149624aac5'},
+        'romeo.txt': {'mode': '-rw-r--r--', 'mtime': 1580883024000000000, 'size': 942, 'md5': '80f1521c4533d017df063c623b75cde3'},
+        'romeo.txt.gz': {'mode': '-rw-r--r--', 'mtime': 1580883024000000000, 'size': 558, 'md5': 'f261bc929b34f58d8138413ed6252f2d'},
+    }
+    MountArchiveAndCheckTree('real.rpm', want_tree)
+
+
 # Tests automatic mount point creation, removal, and deduplication.
 def TestAutoMountPoint():
     logging.info("Testing automatic mount point creation and removal")
@@ -2883,6 +2941,7 @@ if has_memcache: TestExtendedAttributes(['-o', 'memcache'])
 
 TestMultiArchiveUsage()
 TestUsage()
+TestRealRpm()
 TestAutoMountPoint()
 TestFuseErrors()
 TestPathSanitization()
