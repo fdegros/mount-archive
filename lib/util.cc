@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <tuple>
 
 #include <archive.h>
 #include <archive_entry.h>
