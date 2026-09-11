@@ -142,7 +142,13 @@ class Logger {
   ~Logger();
 
   // Streams a value into the log message.
+  // C++23: use abbreviated function template; C++20 fallback via macro
+  #if __cplusplus < 202302L
+  template<typename T>
+  Logger&& operator<<(const T& a) && {
+  #else
   Logger&& operator<<(const auto& a) && {
+  #endif
     oss_ << a;
     return std::move(*this);
   }
