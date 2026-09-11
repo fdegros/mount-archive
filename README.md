@@ -29,6 +29,11 @@ It is similar to [**archivemount**](https://github.com/cybernoid/archivemount)
 but can be much faster (see the Performance section below), although it can only
 mount read-only, not read-write.
 
+It is similar to [**ratarmount**](https://github.com/mxmlnkn/ratarmount),
+which offers random access to TAR archives by caching them as an index
+database, recursive mounting, and mounting of remote archives, although it is
+implemented in Python.
+
 **fuse-archive** automatically creates the target mount point if needed and
 automatically removes it when the file system is unmounted. If the mount point
 already existed before **fuse-archive** was started, it is not removed.
@@ -582,24 +587,28 @@ and does not use **archivemount**'s
 
 # COMPARISON
 
-Feature                   | **fuse-archive** | **mount-zip** | **archivemount**
-:------------------------ | :--------------: | :-----------: | :--------------:
-Read-Write Support        | ❌                | ❌             | ✅
-Format Support            | Wide             | ZIP           | Wide
-GPG Encryption            | ✅                | ❌             | ❌
-Native ZIP Encryption     | ✅                | ✅             | ✅
-Native 7Z/RAR Encryption  | ❌                | ❌             | ❌
-Lazy Decompression        | ✅                | ✅             | ❌
-Default Caching           | Pre-emptive      | Lazy          | N/A
-Memory Caching            | ✅                | ✅             | ❌
-Temp File Caching         | ✅                | ✅             | ❌
-Handles Huge Files        | ✅                | ✅             | ❌
-Sparse File Detection     | ✅                | ❌             | ❌
-Linear Complexity         | ✅                | ✅             | ❌
-Precision Timestamps      | ✅                | ✅             | ✅
-Several Archives          | ✅                | ✅             | ❌
-Automatic Mount Point     | ✅                | ✅             | ❌
-FUSE 3 Support            | ✅                | ✅             | ❌
+Feature                   | **fuse-archive** | **mount-zip** | **archivemount** | **ratarmount**
+:------------------------ | :--------------: | :-----------: | :--------------: | :--------------:
+Read-Write Support        | ❌                | ❌             | ✅               | ✅
+Format Support            | Wide             | ZIP           | Wide             | Wide
+Implementation            | C++              | C++           | C                | Python
+GPG Encryption            | ✅                | ❌             | ❌               | ❌
+Native ZIP Encryption     | ✅                | ✅             | ✅               | ✅
+Native 7Z/RAR Encryption  | ❌                | ❌             | ❌               | ✅
+Lazy Decompression        | ✅                | ✅             | ❌               | ✅
+Default Caching           | Pre-emptive      | Lazy          | N/A              | Lazy
+Memory Caching            | ✅                | ✅             | ❌               | ❌
+Temp File Caching         | ✅                | ✅             | ❌               | ❌
+Index Caching             | ❌                | ❌             | ❌               | ✅
+Handles Huge Files        | ✅                | ✅             | ❌               | ✅
+Sparse File Detection     | ✅                | ❌             | ❌               | ❌
+Linear Complexity         | ✅                | ✅             | ❌               | ✅
+Precision Timestamps      | ✅                | ✅             | ✅               | ✅
+Several Archives          | ✅                | ✅             | ❌               | ✅
+Automatic Mount Point     | ✅                | ✅             | ❌               | ✅
+FUSE 3 Support            | ✅                | ✅             | ❌               | ✅
+Recursive Mounting        | ❌                | ❌             | ❌               | ✅
+Remote Mounting           | ❌                | ❌             | ❌               | ✅
 
 # RETURN VALUE
 
