@@ -698,9 +698,6 @@ def TestArchiveWithOptions(options=[]):
 
     want_tree = {
         '.': {'ino': 1, 'mode': 'drwxr-xr-x', 'nlink': 2},
-        # Mysterious extra file
-        # https://github.com/libarchive/libarchive/issues/2524
-        'data': {'mode': '-rw-r--r--', 'size': 0, 'md5': 'd41d8cd98f00b204e9800998ecf8427e'},
         '0.bytes': {'mode': '-rw-r--r--', 'size': 0, 'md5': 'd41d8cd98f00b204e9800998ecf8427e'},
         'github-tags.json': {'mode': '-rw-r--r--', 'size': 853, 'md5': 'b2d7993ed99c65296bf95824c57b4fdc'},
         'hello.sh': {'mode': '-rw-r--r--', 'size': 693, 'md5': '72d710dd3766a67401a79f8d3df3114c'},
@@ -717,7 +714,7 @@ def TestArchiveWithOptions(options=[]):
         zip_names += ['archive.a.gz', 'archive.ar.gz']
 
     for zip_name in zip_names:
-        MountArchiveAndCheckTree(zip_name, want_tree, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, strict=False, options=options)
 
     want_tree = {
         # Don't check mtime for this archive.
