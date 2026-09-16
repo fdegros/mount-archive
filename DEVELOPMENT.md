@@ -1,14 +1,19 @@
 # Development Guide for fuse-archive
 
-This document provides project-specific context, conventions, and workflows for building and contributing to the `fuse-archive` repository.
+This document provides project-specific context, conventions, and workflows for
+building and contributing to the `fuse-archive` repository.
 
 ## Project Overview
 
-`fuse-archive` is a read-only FUSE filesystem that mounts various archive and compressed file formats (ZIP, TAR, 7Z, RAR, ISO, etc.) using the `libarchive` library. The project is structured as a core library in `lib/` and a slim CLI wrapper in `fuse-archive.cc`.
+`fuse-archive` is a read-only FUSE filesystem that mounts various archive and
+compressed file formats (ZIP, TAR, 7Z, RAR, ISO, etc.) using the `libarchive`
+library. The project is structured as a core library in `lib/` and a slim CLI
+wrapper in `fuse-archive.cc`.
 
 ## C++ Standard
 
-The project uses **C++23**. Ensure you are using a modern compiler (e.g., GCC 13+ or Clang 16+) that supports the C++23 standard.
+The project uses **C++23**. Ensure you are using a modern compiler (e.g., GCC
+13+ or Clang 16+) that supports the C++23 standard.
 
 ## Versioning Policy
 
@@ -23,10 +28,12 @@ Current state: **1.25 (Development)**.
 ### Makefile Variables
 - `DEBUG=1`: Enable debug symbols and disable optimizations.
 - `ASAN=1`: Enable AddressSanitizer for memory safety checks.
+- `UBSAN=1`: Enable UndefinedBehaviorSanitizer for undefined behavior checks.
 
 ### Key Makefile Targets
 - `make all`: Build the `fuse-archive` binary and the man page.
-- `make check-fast`: Run the fast subset of tests (recommended for most dev work).
+- `make check-fast`: Run the fast subset of tests (recommended for most dev
+  work).
 - `make check`: Run the full test suite (including large file tests).
 - `make doc`: Regenerate the `fuse-archive.1` man page from `README.md`.
 - `make release`: Run the automated release workflow (see below).
@@ -34,34 +41,52 @@ Current state: **1.25 (Development)**.
 
 ## Documentation Pipeline
 
-The `README.md` file serves as both the user guide and the source for the man page.
+The `README.md` file serves as both the user guide and the source for the man
+page.
 - **Generation**: `pandoc` converts `README.md` to `roff` format.
-- **Formatting**: The `Makefile` uses `sed` post-processing on the `pandoc` output to ensure bulleted lists are rendered compactly (using `.PD 0`) in the man page.
-- **Markdown requirement**: Bulleted lists in `README.md` **must** be preceded by a blank line for correct `pandoc` parsing.
+- **Formatting**: The `Makefile` uses `sed` post-processing on the `pandoc`
+  output to ensure bulleted lists are rendered compactly (using `.PD 0`) in the
+  man page.
+- **Markdown requirement**: Bulleted lists in `README.md` **must** be preceded
+  by a blank line for correct `pandoc` parsing.
 
 ## Release Process
 
 The release process is fully automated via `release.py`.
 - **Command**: `make release [VERSION=X.Y]`
-- **Action**: Bumps version, updates dates, regenerates docs, creates a stable release commit and git tag, then bumps to the next odd development version with another commit.
-- **Manual Step**: Always `git push origin main --tags` after a successful `make release`.
+- **Action**: Bumps version, updates dates, regenerates docs, creates a stable
+  release commit and git tag, then bumps to the next odd development version
+  with another commit.
+- **Manual Step**: Always `git push origin main --tags` after a successful 
+  `make release`.
 
 ## Technical Standards
 
 ### Memory Safety
-The project aims for full **ASAN compliance**. Always verify changes with `ASAN=1 make check-fast`.
+The project aims for full **ASAN compliance**. Always verify changes with
+`ASAN=1 make check-fast`.
 
 ### Resource Management (RAII)
 - Use RAII guards for resource cleanup.
 - **Specific Helpers**:
   - `FileDescriptor`: Manages file descriptors.
-  - `Cleanup`: A generic helper that runs a provided lambda/function in its destructor, used for one-off cleanup tasks like removing temporary mount points (e.g., `mount_point_guard`) or performing the global teardown (e.g., `global_cleanup_guard`).
-- **Shutdown Performance**: Global teardown (clearing the virtual node tree, disposing of children, emptying the reader recycle bin, and deleting the global string pool) is wrapped in a `Cleanup` guard inside `#ifdef __SANITIZE_ADDRESS__`. This complex cleanup is **only** performed in ASAN builds to keep production shutdown nearly instant for archives with millions of files, while ensuring a perfectly clean exit for diagnostic builds.
+  - `Cleanup`: A generic helper that runs a provided lambda/function in its
+    destructor, used for one-off cleanup tasks like removing temporary mount
+    points (e.g., `mount_point_guard`) or performing the global teardown (e.g.,
+    `global_cleanup_guard`).
+- **Shutdown Performance**: Global teardown (clearing the virtual node tree,
+  disposing of children, emptying the reader recycle bin, and deleting the
+  global string pool) is wrapped in a `Cleanup` guard inside `#ifdef
+  __SANITIZE_ADDRESS__`. This complex cleanup is **only** performed in ASAN
+  builds to keep production shutdown nearly instant for archives with millions
+  of files, while ensuring a perfectly clean exit for diagnostic builds.
 
 ### Portability
 - The project is 32-bit compatible.
-- **Year 2038**: Always build with `-D_TIME_BITS=64` (handled in `Makefile`) to ensure correct timestamp handling on 32-bit systems.
+- **Year 2038**: Always build with `-D_TIME_BITS=64` (handled in `Makefile`) to
+  ensure correct timestamp handling on 32-bit systems.
 
 ## Testing
 - **Main Runner**: `test/test.py`
-- **Data Generation**: Large or complex test archives are generated by scripts in the `test/` directory (e.g., `make_big_zip.py`).
+- **Data Generation**: Large or complex test archives are generated by scripts
+  in the `test/` directory (e.g., `make_big_zip.py`).
