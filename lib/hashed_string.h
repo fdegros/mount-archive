@@ -52,7 +52,13 @@ struct IsEqual {
 
   // Returns true if both objects have the same hash and identical string
   // content.
+  // C++23: abbreviated function template; C++20 fallback via macro
+  #if __cplusplus < 202302L
+  template<typename T, typename U>
+  bool operator()(const T& a, const U& b) const {
+  #else
   bool operator()(const auto& a, const auto& b) const {
+  #endif
     return a.hash == b.hash && a.string == b.string;
   }
 };
@@ -62,7 +68,15 @@ struct Hash {
   using is_transparent = std::true_type;
 
   // Returns the pre-computed hash of the given object.
-  size_t operator()(const auto& x) const { return x.hash; }
+  // C++23: abbreviated function template; C++20 fallback via macro
+  #if __cplusplus < 202302L
+  template<typename T>
+  size_t operator()(const T& x) const {
+  #else
+  size_t operator()(const auto& x) const {
+  #endif
+    return x.hash;
+  }
 };
 
 // Set of unique (deduplicated) strings used to save memory for repeated
