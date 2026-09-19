@@ -70,6 +70,7 @@ logging.info(f'FUSE major version: {fuse_major_version}')
 
 on_mac = sys.platform.startswith('darwin')
 on_linux = sys.platform.startswith('linux')
+on_freebsd = sys.platform.startswith('freebsd')
 
 # On macOS, using the default TMPDIR causes Finder to use CPU excessively.
 tmp_dir_base = '/tmp' if on_mac else None
@@ -247,7 +248,7 @@ def CanRun(args):
         subprocess.run(args, capture_output=True, check=True)
         logging.debug(f'Can run {args!r}')
         return True
-    except FileNotFoundError as e:
+    except (FileNotFoundError, subprocess.CalledProcessError) as e:
         logging.debug(f'Cannot run {args!r}: {e}')
         logging.info(f'Will skip tests relying on {args[0]}')
         return False
@@ -257,9 +258,9 @@ has_base64 = CanRun(['base64', '--version'])
 has_brotli = CanRun(['brotli', '--version'])
 has_bzip2 = CanRun(['bzip2', '--help'])
 
-# BSD compress (macOS) is always present but does not support -V, --help, or
-# -h. On Linux, ncompress may or may not be installed and does support -V.
-has_compress = on_mac or CanRun(['compress', '-V'])
+# BSD compress (FreeBSD, macOS) is always present but does not support -V, --help,
+# or -h. On Linux, ncompress may or may not be installed and does support -V.
+has_compress = on_freebsd or on_mac or CanRun(['compress', '-V'])
 
 # On macOS, even if the `gpg` program is present, libarchive can't  reach
 # gpg-agent's FD / socket.

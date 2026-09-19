@@ -285,6 +285,10 @@ void SetSafePath() {
 #ifdef __APPLE__
           "/opt/homebrew/bin", "/opt/local/bin",
 #endif
+#ifdef __FreeBSD__
+// libfuse needs mount_fusefs in the PATH.
+          "/sbin",
+#endif
       };
 
       // Only keep directories that are in the safe list.

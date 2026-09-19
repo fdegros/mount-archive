@@ -1,5 +1,6 @@
 PROJECT = fuse-archive
 PKG_CONFIG ?= pkg-config
+OS := $(shell uname -s)
 
 FUSE_MAJOR_VERSION ?= 3
 
@@ -17,7 +18,7 @@ UNIT_TEST_DEPS = gtest gtest_main
 # On macOS, libarchive is keg-only (not symlinked into the default search
 # path). Wire the Homebrew path into PKG_CONFIG_PATH so every pkg-config call
 # in this Makefile resolves the correct version regardless of shell environment.
-ifeq ($(shell uname -s),Darwin)
+ifeq ($(OS),Darwin)
   COMMON_CXXFLAGS += -std=gnu++23
   PREFIX ?= /usr/local
   BREW_PREFIX := $(shell brew --prefix 2>/dev/null)
@@ -35,6 +36,12 @@ else
   # implemented via libatomic's runtime fallback on platforms without a
   # lock-free 16-byte compare-and-swap.
   PKG_LDFLAGS += -latomic
+endif
+
+# On FreeBSD, Boost headers installed from the ports are in
+# /usr/local/include and the base Clang does not look there by default.
+ifeq ($(OS),FreeBSD)
+  COMMON_CXXFLAGS += -I/usr/local/include
 endif
 
 PKG_CXXFLAGS += $(shell $(PKG_CONFIG) --cflags $(DEPS) 2>/dev/null)
