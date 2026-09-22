@@ -161,9 +161,11 @@ valgrind: out/$(PROJECT) $(UNIT_TEST_BIN)
 	$(if $(UNIT_TEST_BIN),valgrind -q --leak-check=full --error-exitcode=33 $(UNIT_TEST_BIN))
 	MOUNT_WRAPPER="valgrind -q --leak-check=full --error-exitcode=33" python3 tests/test.py --fast
 
+CHECK_TARGET ?= check-fast
+
 coverage:
 	$(MAKE) clean
-	$(MAKE) DEBUG=1 COVERAGE=1 check-fast
+	$(MAKE) DEBUG=1 COVERAGE=1 $(CHECK_TARGET)
 	lcov --capture --directory out --output-file out/coverage.info --ignore-errors mismatch,inconsistent
 	lcov --remove out/coverage.info '/usr/include/*' '/usr/lib/*' 'tests/*' --output-file out/coverage.info --ignore-errors unused,inconsistent
 	genhtml out/coverage.info --output-directory out/coverage --ignore-errors inconsistent
