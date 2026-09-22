@@ -517,7 +517,7 @@ def TestArchiveWithOptions(options=[]):
         zip_names += [
             'archive.zip', 'archive.aab', 'archive.apk', 'archive.cbz',
             'archive.ear', 'archive.epub', 'archive.ipa', 'archive.jar',
-            'archive.war', 'archive.whl', 'archive.xpi'
+            'archive.war', 'archive.whl', 'archive.xpi', 'archive.sh'
         ]
 
     if has_bz2lib or has_bzip2:
