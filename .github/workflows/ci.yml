@@ -46,12 +46,21 @@ jobs:
     # GitHub-hosted runners). Unlike macOS, FreeBSD's fusefs kernel module
     # loads without any interactive consent step, so the full functional
     # test suite runs here too.
+    #
+    # macos-latest is an Apple Silicon (arm64) host. Apple's Hypervisor
+    # Framework, which is what makes nested virtualization possible here at
+    # all, only accelerates same-architecture guests: an x86_64 guest (the
+    # action's default) on this arm64 host has to be fully software-emulated
+    # (QEMU TCG) instead, which is brutal for something as CPU-heavy as C++
+    # compilation. Request an arm64 guest instead so it can run under real
+    # hardware acceleration.
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build and test in FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
+          arch: aarch64
           usesh: true
           # The default rsync-based sync hits a protocol mismatch between
           # macOS's old bundled rsync (the action's host) and FreeBSD's
