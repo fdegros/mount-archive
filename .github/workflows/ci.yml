@@ -57,18 +57,22 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install a modern rsync
+        # The default rsync-based sync previously hit a protocol mismatch
+        # between macOS's old bundled rsync (the action's host) and
+        # FreeBSD's newer one ("unexpected end of file"), which is why this
+        # job fell back to sshfs, then nfs - both of which are *live*
+        # network mounts (every file read/write during the build crosses
+        # the network), unlike rsync's one-time copy to local VM disk
+        # followed by a fully-local build. That live-mount overhead is the
+        # likely reason this job is ~24x slower than the linux one. Try
+        # fixing the actual protocol mismatch instead of working around it.
+        run: brew install rsync
       - name: Build and test in FreeBSD VM
         uses: vmactions/freebsd-vm@v1
         with:
           arch: aarch64
           usesh: true
-          # The default rsync-based sync hits a protocol mismatch between
-          # macOS's old bundled rsync (the action's host) and FreeBSD's
-          # newer one ("unexpected end of file"). sshfs (tried first) was
-          # itself unreliable here (mount kept dropping: "remote host has
-          # disconnected"), so try nfs instead - the action's other live
-          # mount option.
-          sync: nfs
           prepare: |
             pkg install -y pkgconf boost-libs libarchive fusefs-libs3 \
               googletest python3 gmake gnupg
