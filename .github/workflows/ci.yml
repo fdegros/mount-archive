@@ -17,28 +17,32 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libfuse3-dev fuse3 libarchive-dev libboost-dev pkg-config \
-            libgtest-dev \
-            python3 brotli coreutils lrzip lzop ncompress lz4 lzip gpg
+            libboost-dev libfuse3-dev fuse3 libarchive-dev \
+            pkg-config libgtest-dev \
+            python3 mount brotli coreutils lrzip lzop ncompress lz4 lzip gpg
       - name: Build and test
         run: make check-fast
 
   macos:
-    # Native macOS VM. This only verifies that fuse-archive compiles.
-    # macFUSE needs a kernel extension that requires a reboot and manual
-    # user consent (SIP), which isn't possible on an ephemeral CI runner,
-    # so no archive can actually be mounted here.
+    # Native macOS VM. This only verifies that fuse-archive compiles and that
+    # its unit tests pass. macFUSE needs a kernel extension that requires a
+    # reboot and manual user consent (SIP), which isn't possible on an
+    # ephemeral CI runner, so no archive can actually be mounted here:
+    # tests/test.py (the functional test suite, run via `make check-fast`)
+    # is skipped, but unit_tests (pure GoogleTest, no mount needed) is not.
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          brew install boost libarchive pkg-config
+          brew install boost libarchive googletest pkg-config
           # Only needed to get fuse.h and the fuse3.pc pkg-config file for
           # compiling; the bundled kernel extension is never loaded.
           brew install --cask macfuse
       - name: Build
         run: make all
+      - name: Unit tests
+        run: make unit_tests
 
   freebsd:
     # GitHub has no native FreeBSD runner. vmactions/freebsd-vm boots a real
