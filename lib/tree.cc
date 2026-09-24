@@ -643,9 +643,13 @@ void Tree::ProcessEntry(Reader& r, std::string& path, Node* const local_root) {
   if (options_.cache == Cache::Full) {
     // Cache file data.
     n->size = archive_entry_size(e);
+    const auto old_block_count = block_count_;
+    block_count_ = old_block_count + n->GetBlockCount();
     cache_size_ = r.CacheEntryData(cache_fd_, cache_size_, n);
+    block_count_ = old_block_count + n->GetBlockCount();
   } else {
     n->size = r.GetEntrySize();
+    block_count_ += n->GetBlockCount();
   }
 
   // Extract extended attributes.
@@ -665,7 +669,6 @@ void Tree::ProcessEntry(Reader& r, std::string& path, Node* const local_root) {
   }
 
   r.CheckPassword();
-  block_count_ += n->GetBlockCount();
 
   LOG(DEBUG) << "Created " << *n;
 }
