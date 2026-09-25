@@ -82,5 +82,6 @@
 - [x] Add a `-o noatime` option.
 - [x] Adjust man page generation for compact lists.
 - [x] Handle btime timestamps.
+- [ ] Enhance tests for atime, ctime and btime.
 - [ ] Add a `USE_LIBZIP` build flag.
 - [ ] Handle ZIP archives with `libzip` instead of `libarchive` if `USE_LIBZIP` is enabled.

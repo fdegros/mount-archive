@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import argparse
+import ctypes
 import errno
 import hashlib
 import logging
@@ -56,17 +57,18 @@ sr = subprocess.run([mount_program, '--version'],
                     encoding='UTF-8')
 
 
-def GetFuseMajorVersion():
+def GetFuseVersion():
     for line in sr.stdout.split('\n'):
         if 'FUSE library version' in line:
             # Handle "FUSE library version 3.x" and "FUSE library version: 3.x"
             version_str = line.split('version')[-1].strip(': ').split()[0]
-            return int(version_str.split('.')[0])
-    return 0
+            parts = version_str.split('.')
+            return [int(part) for part in parts]
+    return [0, 0]
 
 
-fuse_major_version = GetFuseMajorVersion()
-logging.info(f'FUSE major version: {fuse_major_version}')
+fuse_version = GetFuseVersion()
+logging.info(f'FUSE version: {fuse_version}')
 
 
 def GetLibArchiveVersion():
@@ -104,9 +106,108 @@ has_xattrs = not on_mac and not on_freebsd
 if not has_xattrs:
     logging.info('Will skip tests for xattrs')
 
-has_holes = not on_mac and fuse_major_version >= 3
+has_holes = not on_mac and fuse_version >= [3]
 if not has_holes:
     logging.info('Will skip tests for holes')
+
+# Getting a birth time out of a FUSE mount depends on the platform's FUSE
+# wire protocol, not just on fuse-archive's own code:
+# - Linux: the classic getattr reply (struct fuse_attr) has no birth-time
+#   field at all, on any platform. Linux instead has a separate statx(2)
+#   syscall with its own dedicated FUSE request/reply pair (struct
+#   fuse_statx) that does carry one, needing libfuse >= 3.18 (older versions
+#   don't even declare .statx in fuse_operations - matching fuse-archive.cc's
+#   own FUSE_HAS_STATX check).
+# - macOS: assumed to work, via macFUSE's own protocol extension for
+#   creation time (a separate implementation from vanilla libfuse). This is
+#   *not* verified by this project's own CI: the macOS job never runs this
+#   script at all, only the plain unit tests, since macFUSE needs a kernel
+#   extension that requires a reboot and interactive SIP consent - so a
+#   passing macOS CI run says nothing about whether this actually holds.
+#   True if you run this script by hand on a real Mac, though.
+# - FreeBSD: uses vanilla libfuse (fusefs-libs3) and the native fusefs kernel
+#   module, which only speaks the classic getattr protocol - there is no
+#   wire-level channel for birth time here at all, so it can never be
+#   retrieved regardless of what fuse-archive itself computes. This one *is*
+#   verified: the FreeBSD CI job does run this script, and did in fact
+#   observe exactly this failure mode before has_btime excluded it.
+has_btime = on_mac or (on_linux and fuse_version >= [3, 18])
+if not has_btime:
+    logging.info('Will skip tests for btime')
+
+if on_linux:
+    # Linux has no birth time (creation time) in the classic stat(2) call, or
+    # in Python's os.stat(): it's only exposed via the statx(2) syscall (added
+    # in kernel 4.11), which Python's os module doesn't wrap. Minimal ctypes
+    # definitions to call it directly, just for the fields actually needed.
+    _libc = ctypes.CDLL('libc.so.6', use_errno=True)
+
+    class _StatxTimestamp(ctypes.Structure):
+        _fields_ = [
+            ('tv_sec', ctypes.c_int64),
+            ('tv_nsec', ctypes.c_uint32),
+            ('__reserved', ctypes.c_int32),
+        ]
+
+    class _Statx(ctypes.Structure):
+        _fields_ = [
+            ('stx_mask', ctypes.c_uint32),
+            ('stx_blksize', ctypes.c_uint32),
+            ('stx_attributes', ctypes.c_uint64),
+            ('stx_nlink', ctypes.c_uint32),
+            ('stx_uid', ctypes.c_uint32),
+            ('stx_gid', ctypes.c_uint32),
+            ('stx_mode', ctypes.c_uint16),
+            ('__spare0', ctypes.c_uint16 * 1),
+            ('stx_ino', ctypes.c_uint64),
+            ('stx_size', ctypes.c_uint64),
+            ('stx_blocks', ctypes.c_uint64),
+            ('stx_attributes_mask', ctypes.c_uint64),
+            ('stx_atime', _StatxTimestamp),
+            ('stx_btime', _StatxTimestamp),
+            ('stx_ctime', _StatxTimestamp),
+            ('stx_mtime', _StatxTimestamp),
+            # The kernel writes a full 256-byte struct; the remaining fields
+            # (rdev/dev major/minor, mount ID, etc.) aren't needed here, but
+            # this padding must still cover them so ctypes doesn't read or
+            # write past the end of the buffer.
+            ('__pad', ctypes.c_uint64 * 16),
+        ]
+
+    _AT_FDCWD = -100
+    _AT_SYMLINK_NOFOLLOW = 0x100
+    _STATX_BTIME = 0x800
+
+
+# Gets the birth time (creation time) of the given path, in nanoseconds since
+# the epoch, matching the precision of the other *_ns stat fields. Returns
+# None if unavailable. `st` is that path's already-fetched (not
+# following symlinks) os.stat_result, reused on platforms that carry birth
+# time there directly.
+def GetBirthTimeNs(path, st):
+    if on_mac or on_freebsd:
+        ns = getattr(st, 'st_birthtime_ns', None)
+        return ns if ns is not None else round(st.st_birthtime * 1_000_000_000)
+
+    if on_linux:
+        buf = _Statx()
+        try:
+            ret = _libc.statx(_AT_FDCWD, os.fsencode(path),
+                               _AT_SYMLINK_NOFOLLOW, _STATX_BTIME,
+                               ctypes.byref(buf))
+        except OSError as e:
+            LogError(f'Cannot get statx birth time for {path!r}: {e}')
+            return None
+        if ret != 0:
+            LogError('Cannot get statx birth time for '
+                      f'{path!r}: {os.strerror(ctypes.get_errno())}')
+            return None
+        if not (buf.stx_mask & _STATX_BTIME):
+            return None
+        return buf.stx_btime.tv_sec * 1_000_000_000 + buf.stx_btime.tv_nsec
+
+    return None
+
 
 # Computes the MD5 hash of the given file.
 # Returns the MD5 hash as an hexadecimal string.
@@ -157,6 +258,7 @@ def GetTree(root, use_md5=True):
             'atime': st.st_atime_ns,
             'mtime': st.st_mtime_ns,
             'ctime': st.st_ctime_ns,
+            'btime': GetBirthTimeNs(path, st),
         }
 
         key = os.path.relpath(path, root)
@@ -246,10 +348,12 @@ def CheckTree(got_tree, want_tree, strict=False):
                 if not has_holes and key == 'holes':
                     continue
 
+                if not has_btime and key == 'btime':
+                    continue
+
                 got_value = got_entry.get(key)
 
-                if key in ('atime', 'mtime',
-                           'ctime') and want_value % 1000000000 == 0:
+                if key in ('atime', 'mtime', 'ctime', 'btime') and want_value % 1000000000 == 0:
                     got_value //= 1000000000
                     want_value //= 1000000000
 
