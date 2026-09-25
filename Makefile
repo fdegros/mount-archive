@@ -23,7 +23,6 @@ UNIT_TEST_DEPS = gtest gtest_main
 # in this Makefile resolves the correct version regardless of shell environment.
 ifeq ($(OS),Darwin)
   COMMON_CXXFLAGS += -std=gnu++$(CXXSTD)
-  PREFIX ?= /usr/local
   BREW_PREFIX := $(shell brew --prefix 2>/dev/null)
   ifneq ($(BREW_PREFIX),)
     PKG_CONFIG = env PKG_CONFIG_PATH="$(BREW_PREFIX)/opt/libarchive/lib/pkgconfig" pkg-config
@@ -62,7 +61,7 @@ UNIT_TEST_PKG_CXXFLAGS := $(shell $(PKG_CONFIG) --cflags $(UNIT_TEST_DEPS) 2>/de
 UNIT_TEST_PKG_LDFLAGS := $(shell $(PKG_CONFIG) --libs $(UNIT_TEST_DEPS) 2>/dev/null)
 endif
 
-COMMON_CXXFLAGS += -Wall -Wextra -Wno-missing-field-initializers -Wno-sign-compare -Wno-unused-parameter -I.
+COMMON_CXXFLAGS += -Wall -Wextra -Wno-missing-field-initializers -Wno-sign-compare -I.
 COMMON_CXXFLAGS += -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64 $(FUSE_CXXFLAGS)
 
 ifeq ($(DEBUG), 1)
@@ -86,19 +85,21 @@ COMMON_CXXFLAGS += -fprofile-arcs -ftest-coverage
 LDFLAGS += --coverage
 endif
 
-PREFIX ?= /usr
+PREFIX ?= /usr/local
 BINDIR = $(PREFIX)/bin
 MANDIR = $(PREFIX)/share/man/man1
 MAN = $(PROJECT).1
 INSTALL = install
 
-all: out/$(PROJECT)
+OUT = out
+
+all: $(OUT)/$(PROJECT)
 
 # ---- Formatting
 
 FORMAT = clang-format
 CC_FILES = $(wildcard *.cc lib/*.cc tests/*.cc)
-H_FILES = $(wildcard lib/*.h)
+H_FILES = $(wildcard lib/*.h tests/*.h)
 ALL_CXX_FILES = $(CC_FILES) $(H_FILES)
 
 format:
@@ -110,55 +111,55 @@ check-format:
 # ---- Library
 
 LIB_DIR = lib
-LIB_OUT = out/$(LIB_DIR)
+LIB_OUT = $(OUT)/$(LIB_DIR)
 LIB_SOURCES = $(wildcard $(LIB_DIR)/*.cc)
-LIB_OBJECTS = $(addprefix out/,$(LIB_SOURCES:.cc=.o))
-LIB_ARCHIVE = out/lib$(PROJECT).a
+LIB_OBJECTS = $(addprefix $(OUT)/,$(LIB_SOURCES:.cc=.o))
+LIB_ARCHIVE = $(OUT)/lib$(PROJECT).a
 
 $(LIB_ARCHIVE): $(LIB_OBJECTS)
 	$(AR) $(ARFLAGS) $@ $(LIB_OBJECTS)
 
-out/$(LIB_DIR)/%.o: $(LIB_DIR)/%.cc
+$(OUT)/$(LIB_DIR)/%.o: $(LIB_DIR)/%.cc
 	@mkdir -p $(dir $@)
 	$(CXX) -c $(COMMON_CXXFLAGS) $(PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< -o $@ -MMD -MP -MF $(@:.o=.d)
 
 # ---- Binaries
 
-out/$(PROJECT): $(PROJECT).cc $(LIB_ARCHIVE)
-	mkdir -p out
-	$(CXX) $(COMMON_CXXFLAGS) $(PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< $(LIB_ARCHIVE) $(PKG_LDFLAGS) $(LDFLAGS) -o $@
+$(OUT)/$(PROJECT): $(PROJECT).cc $(LIB_ARCHIVE)
+	mkdir -p $(OUT)
+	$(CXX) $(COMMON_CXXFLAGS) -Ilib $(PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< $(LIB_ARCHIVE) $(PKG_LDFLAGS) $(LDFLAGS) -o $@
 
 # ---- Unit Tests
 
 UNIT_TEST = unit_tests
-UNIT_TEST_SOURCES = tests/unit_tests.cc
-UNIT_TEST_OBJECTS = $(addprefix out/,$(UNIT_TEST_SOURCES:.cc=.o))
+UNIT_TEST_SOURCES = $(wildcard tests/*.cc)
+UNIT_TEST_OBJECTS = $(addprefix $(OUT)/,$(UNIT_TEST_SOURCES:.cc=.o))
 
 ifeq ($(HAS_GTEST), yes)
-out/$(UNIT_TEST): $(UNIT_TEST_OBJECTS) $(LIB_ARCHIVE)
+$(OUT)/$(UNIT_TEST): $(UNIT_TEST_OBJECTS) $(LIB_ARCHIVE)
 	$(CXX) $(COMMON_CXXFLAGS) $(PKG_CXXFLAGS) $(UNIT_TEST_PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $^ $(PKG_LDFLAGS) $(UNIT_TEST_PKG_LDFLAGS) $(LDFLAGS) -o $@
 
-out/tests/%.o: tests/%.cc
+$(OUT)/tests/%.o: tests/%.cc
 	@mkdir -p $(dir $@)
-	$(CXX) -c $(COMMON_CXXFLAGS) $(PKG_CXXFLAGS) $(UNIT_TEST_PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< -o $@ -MMD -MP -MF $(@:.o=.d)
+	$(CXX) -Ilib -c $(COMMON_CXXFLAGS) $(PKG_CXXFLAGS) $(UNIT_TEST_PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< -o $@ -MMD -MP -MF $(@:.o=.d)
 
-UNIT_TEST_BIN = out/$(UNIT_TEST)
+UNIT_TEST_BIN = $(OUT)/$(UNIT_TEST)
 else
 UNIT_TEST_BIN =
 endif
 
 # ---- Standard targets
 
-check: out/$(PROJECT) $(UNIT_TEST_BIN) tests/data/big.zip tests/data/collisions.zip tests/data/deep.tar tests/data/many_nodes.zip
+check: $(OUT)/$(PROJECT) $(UNIT_TEST_BIN) tests/data/big.zip tests/data/collisions.zip tests/data/deep.tar tests/data/many_nodes.zip
 	$(if $(UNIT_TEST_BIN),$(UNIT_TEST_BIN))
 	python3 tests/test.py
 
-check-fast: out/$(PROJECT) $(UNIT_TEST_BIN)
+check-fast: $(OUT)/$(PROJECT) $(UNIT_TEST_BIN)
 	$(if $(UNIT_TEST_BIN),$(UNIT_TEST_BIN))
 	python3 tests/test.py --fast
 
-valgrind: out/$(PROJECT) $(UNIT_TEST_BIN)
-	$(if $(UNIT_TEST_BIN),valgrind -q --leak-check=full --error-exitcode=33 $(UNIT_TEST_BIN))
+valgrind: $(OUT)/$(PROJECT) $(UNIT_TEST_BIN)
+	$(if $(UNIT_TEST_BIN),valgrind -q --leak-check=full --track-origins=yes --error-exitcode=33 $(UNIT_TEST_BIN))
 	MOUNT_WRAPPER="valgrind -q --leak-check=full --error-exitcode=33" python3 tests/test.py --fast
 
 CHECK_TARGET ?= check-fast
@@ -166,10 +167,10 @@ CHECK_TARGET ?= check-fast
 coverage:
 	$(MAKE) clean
 	$(MAKE) DEBUG=1 COVERAGE=1 $(CHECK_TARGET)
-	lcov --capture --directory out --output-file out/coverage.info --ignore-errors mismatch,inconsistent
-	lcov --remove out/coverage.info '/usr/include/*' '/usr/lib/*' 'tests/*' --output-file out/coverage.info --ignore-errors unused,inconsistent
-	genhtml out/coverage.info --output-directory out/coverage --ignore-errors inconsistent
-	@echo "Coverage report generated at out/coverage/index.html"
+	lcov --capture --directory $(OUT) --output-file $(OUT)/coverage.info --ignore-errors mismatch,inconsistent
+	lcov --remove $(OUT)/coverage.info '/usr/include/*' '/usr/lib/*' 'tests/*' --output-file $(OUT)/coverage.info --ignore-errors unused,inconsistent
+	genhtml $(OUT)/coverage.info --output-directory $(OUT)/coverage --ignore-errors inconsistent
+	@echo "Coverage report generated at $(OUT)/coverage/index.html"
 
 test: check
 
@@ -177,7 +178,7 @@ unit_tests: $(UNIT_TEST_BIN)
 	$(if $(UNIT_TEST_BIN),$(UNIT_TEST_BIN),@echo "Google Test not found; cannot run unit tests.")
 
 clean:
-	rm -rf out
+	rm -rf $(OUT)
 
 clean-data:
 	rm -f tests/data/big.zip tests/data/collisions.zip tests/data/deep.tar tests/data/many_nodes.zip
@@ -202,19 +203,18 @@ else
 -include $(UNIT_TEST_OBJECTS:.o=.d)
 endif
 
-install: out/$(PROJECT)
+install: $(OUT)/$(PROJECT)
 	mkdir -p "$(DESTDIR)$(BINDIR)" "$(DESTDIR)$(MANDIR)"
-	$(INSTALL) "out/$(PROJECT)" "$(DESTDIR)$(BINDIR)/$(PROJECT)"
+	$(INSTALL) "$(OUT)/$(PROJECT)" "$(DESTDIR)$(BINDIR)/$(PROJECT)"
 	$(INSTALL) -m 644 $(MAN) "$(DESTDIR)$(MANDIR)/$(MAN)"
 
-install-strip: out/$(PROJECT)
+install-strip: $(OUT)/$(PROJECT)
 	mkdir -p "$(DESTDIR)$(BINDIR)" "$(DESTDIR)$(MANDIR)"
-	$(INSTALL) -s "out/$(PROJECT)" "$(DESTDIR)$(BINDIR)/$(PROJECT)"
+	$(INSTALL) -s "$(OUT)/$(PROJECT)" "$(DESTDIR)$(BINDIR)/$(PROJECT)"
 	$(INSTALL) -m 644 $(MAN) "$(DESTDIR)$(MANDIR)/$(MAN)"
 
 uninstall:
 	rm -f "$(DESTDIR)$(BINDIR)/$(PROJECT)" "$(DESTDIR)$(MANDIR)/$(MAN)"
-
 
 tests/data/big.zip: tests/make_big_zip.py
 	python3 tests/make_big_zip.py
@@ -229,4 +229,3 @@ tests/data/many_nodes.zip: tests/make_many_nodes.py
 	python3 tests/make_many_nodes.py
 
 .PHONY: all check check-fast check-format clean clean-data coverage doc format install install-strip release test uninstall unit_tests valgrind
-
