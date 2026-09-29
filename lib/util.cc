@@ -186,6 +186,7 @@ FileDescriptor CreateCacheFile(bool memcache) {
       return fd;
     }
 #endif
+
     // Other platforms' shm_open (anonymous or named, e.g. macOS or FreeBSD)
     // requires ftruncate to a known size before any write and cannot
     // auto-extend like Linux memfd or a regular file, so it's unsuitable
@@ -193,14 +194,13 @@ FileDescriptor CreateCacheFile(bool memcache) {
     // final size isn't known upfront, and retrofitting ftruncate-before-
     // each-write would mean touching every write call site, not just this
     // function.
-
     PLOG(ERROR) << "Cannot create memory-backed cache file";
     throw ExitCode::CANNOT_CREATE_CACHE;
   }
 
   std::string const cache_dir = GetCacheDir();
 
-#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__APPLE__)
+#ifdef O_TMPFILE
   fd = FileDescriptor(open(cache_dir.c_str(), O_TMPFILE | O_RDWR | O_EXCL, 0));
   if (fd.IsValid()) {
     LOG(DEBUG) << "Created anonymous cache file in " << Path(cache_dir);
