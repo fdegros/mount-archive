@@ -82,7 +82,7 @@
 - [x] Add a `-o noatime` option.
 - [x] Adjust man page generation for compact lists.
 - [x] Handle btime timestamps.
+- [x] Investigate if better password gathering methods are possible.
 - [ ] Enhance tests for atime, ctime and btime.
-- [ ] Investigate if better password gathering methods are possible.
 - [ ] Add a `USE_LIBZIP` build flag.
 - [ ] Handle ZIP archives with `libzip` instead of `libarchive` if `USE_LIBZIP` is enabled.
