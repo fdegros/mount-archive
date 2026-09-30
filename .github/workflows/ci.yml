@@ -21,7 +21,12 @@ jobs:
             pkg-config libgtest-dev \
             python3 mount brotli coreutils lrzip lzop ncompress lz4 lzip gpg
       - name: Build and test
-        run: make check-fast
+        run: |
+          make check-fast ASAN=1 UBSAN=1 DEBUG=1
+          make clean
+          make check-fast ASAN=1 UBSAN=1
+          make clean
+          make check-fast
 
   macos:
     # Native macOS VM. This only verifies that fuse-archive compiles and that
