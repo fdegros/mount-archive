@@ -116,7 +116,9 @@ fuse_opt const g_fuse_opts[] = {
     {"precache", offsetof(Context, options.cache), int(Cache::Full)},
     {"lazycache", offsetof(Context, options.cache), int(Cache::Lazy)},
     {"nocache", offsetof(Context, options.cache), int(Cache::None)},
+#if defined(__linux__) || defined(__FreeBSD__)
     {"memcache", offsetof(Context, options.memcache), 1},
+#endif
     {"nomerge", offsetof(Context, options.merge), 0},
     {"notrim", offsetof(Context, options.trim), 0},
     {"nodirs", offsetof(Context, options.dirs), 0},
@@ -237,7 +239,7 @@ general options:
     -o precache            pre-emptive caching of uncompressed data (default)
     -o lazycache           incremental caching of uncompressed data
     -o nocache             no caching of uncompressed data)"
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
          R"(
     -o memcache            caching in memory)"
 #endif

@@ -64,9 +64,7 @@ numeric suffix (e.g., \f[CR]archive (1)\f[R]).
 .PD
 .PP
 \f[B]fuse\-archive\f[R] is continuously tested on Linux and FreeBSD,
-including mounting real archives, and verified to build (but not to
-mount) on macOS \(em macFUSE\(cqs kernel extension needs interactive
-consent that automated testing can\(cqt provide.
+including mounting real archives, and verified to build on macOS.
 .PD
 .SH OPTIONS
 .PD
@@ -112,7 +110,7 @@ No caching of uncompressed data.
 .PD
 .TP
 \f[B]\-o memcache\f[R]
-Caching in memory (Linux only).
+Caching in memory (Linux and FreeBSD only).
 .PD
 .TP
 \f[B]\-o nomerge\f[R]
@@ -691,7 +689,7 @@ This provides the highest performance but can consume a large amount of
 memory.
 It can be used with both pre\-emptive and incremental caching
 strategies.
-This option is only available on Linux.
+This option is only available on Linux and FreeBSD.
 .PD
 .SH ADVANCED OPTIONS
 .PD

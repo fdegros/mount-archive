@@ -74,7 +74,7 @@ real archives, and verified to build on macOS.
 :   No caching of uncompressed data.
 
 **-o memcache**
-:   Caching in memory (Linux only).
+:   Caching in memory (Linux and FreeBSD only).
 
 **-o nomerge**
 :   Do not merge multiple archives on top of each other. Instead, create a
@@ -472,7 +472,8 @@ is automatically deleted when the archive is unmounted.
 The `-o memcache` option instructs **fuse-archive** to store the cache in RAM
 instead of a temporary file. This provides the highest performance but can
 consume a large amount of memory. It can be used with both pre-emptive and
-incremental caching strategies. This option is only available on Linux.
+incremental caching strategies. This option is only available on Linux and
+FreeBSD.
 
 # ADVANCED OPTIONS
 

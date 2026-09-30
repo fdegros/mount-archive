@@ -98,7 +98,7 @@ on_freebsd = sys.platform.startswith('freebsd')
 # On macOS, using the default TMPDIR causes Finder to use CPU excessively.
 tmp_dir_base = '/tmp' if on_mac else None
 
-has_memcache = on_linux
+has_memcache = on_linux or on_freebsd
 if not has_memcache:
     logging.info('Will skip tests relying on memcache')
 
