@@ -73,7 +73,7 @@
 #include "lib/util.h"
 
 #define PROGRAM_NAME "fuse-archive"
-#define PROGRAM_VERSION "1.25"
+#define PROGRAM_VERSION "1.26"
 
 // ---- Compile-time Configuration
 
