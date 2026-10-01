@@ -17,9 +17,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libboost-dev libfuse3-dev fuse3 libarchive-dev \
-            pkg-config libgtest-dev \
-            python3 mount brotli coreutils lrzip lzop ncompress lz4 lzip gpg
+            libarchive-dev libboost-dev libfuse3-dev libgtest-dev \
+            fuse3 pkg-config python3 mount \
+            brotli coreutils gpg lrzip lzip lzop lz4 ncompress
       - name: Build and test
         run: |
           make check-fast ASAN=1 UBSAN=1 DEBUG=1
