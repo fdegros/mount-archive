@@ -8,11 +8,11 @@ CXXSTD ?= 23
 FUSE_MAJOR_VERSION ?= 3
 
 ifeq ($(FUSE_MAJOR_VERSION), 3)
-DEPS = fuse3
-FUSE_CXXFLAGS = -DFUSE_USE_VERSION=30
+  DEPS = fuse3
+  PKG_CXXFLAGS = -DFUSE_USE_VERSION=30
 else ifeq ($(FUSE_MAJOR_VERSION), 2)
-DEPS = fuse
-FUSE_CXXFLAGS = -DFUSE_USE_VERSION=26
+  DEPS = fuse
+  PKG_CXXFLAGS = -DFUSE_USE_VERSION=26
 endif
 
 DEPS += libarchive
@@ -21,19 +21,19 @@ UNIT_TEST_DEPS = gtest gtest_main
 # On macOS, libarchive is keg-only (not symlinked into the default search
 # path). Wire the Homebrew path into PKG_CONFIG_PATH so every pkg-config call
 # in this Makefile resolves the correct version regardless of shell environment.
-ifeq ($(OS),Darwin)
-  COMMON_CXXFLAGS += -std=gnu++$(CXXSTD)
+ifeq ($(OS), Darwin)
+  PKG_CXXFLAGS += -std=gnu++$(CXXSTD)
   BREW_PREFIX := $(shell brew --prefix 2>/dev/null)
   ifneq ($(BREW_PREFIX),)
     PKG_CONFIG = env PKG_CONFIG_PATH="$(BREW_PREFIX)/opt/libarchive/lib/pkgconfig" pkg-config
-    COMMON_CXXFLAGS += -I$(BREW_PREFIX)/opt/boost/include
+    PKG_CXXFLAGS += -I$(BREW_PREFIX)/opt/boost/include
     # macFUSE enables Darwin-extended operation signatures by default
     # (fuse_darwin_attr*, struct statfs*, 5-arg getxattr, fuse_darwin_fill_dir_t).
     # fuse-archive uses standard POSIX signatures, so opt out of the extensions.
-    FUSE_CXXFLAGS += -DFUSE_DARWIN_ENABLE_EXTENSIONS=0
+    PKG_CXXFLAGS += -DFUSE_DARWIN_ENABLE_EXTENSIONS=0
   endif
 else
-  COMMON_CXXFLAGS += -std=c++$(CXXSTD)
+  PKG_CXXFLAGS += -std=c++$(CXXSTD)
 endif
 
 # 16-byte atomics (std::atomic<timespec>, used for Node::atime) are
@@ -41,48 +41,48 @@ endif
 # lock-free 16-byte compare-and-swap. Only glibc/Linux splits this out into
 # a separate library; FreeBSD's compiler-rt provides the fallback directly,
 # and this isn't linked on Darwin either.
-ifeq ($(OS),Linux)
+ifeq ($(OS), Linux)
   PKG_LDFLAGS += -latomic
 endif
 
 # On FreeBSD, Boost headers installed from the ports are in
 # /usr/local/include and the base Clang does not look there by default.
-ifeq ($(OS),FreeBSD)
-  COMMON_CXXFLAGS += -I/usr/local/include
+ifeq ($(OS), FreeBSD)
+  PKG_CXXFLAGS += -I/usr/local/include
 endif
 
 PKG_CXXFLAGS += $(shell $(PKG_CONFIG) --cflags $(DEPS) 2>/dev/null)
 PKG_LDFLAGS += $(shell $(PKG_CONFIG) --libs $(DEPS) 2>/dev/null)
 
-HAS_GTEST := $(shell $(PKG_CONFIG) --exists $(UNIT_TEST_DEPS) 2>/dev/null && echo yes || echo no)
+HAS_GTEST := $(shell $(PKG_CONFIG) --exists $(UNIT_TEST_DEPS) 2>/dev/null && echo 1 || echo 0)
 
-ifeq ($(HAS_GTEST), yes)
-UNIT_TEST_PKG_CXXFLAGS := $(shell $(PKG_CONFIG) --cflags $(UNIT_TEST_DEPS) 2>/dev/null)
-UNIT_TEST_PKG_LDFLAGS := $(shell $(PKG_CONFIG) --libs $(UNIT_TEST_DEPS) 2>/dev/null)
+ifeq ($(HAS_GTEST), 1)
+  UNIT_TEST_CXXFLAGS := $(shell $(PKG_CONFIG) --cflags $(UNIT_TEST_DEPS) 2>/dev/null)
+  UNIT_TEST_LDFLAGS := $(shell $(PKG_CONFIG) --libs $(UNIT_TEST_DEPS) 2>/dev/null)
 endif
 
-COMMON_CXXFLAGS += -Wall -Wextra -Wno-missing-field-initializers -Wno-sign-compare -I.
-COMMON_CXXFLAGS += -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64 $(FUSE_CXXFLAGS)
+PKG_CXXFLAGS += -Wall -Wextra -Wno-missing-field-initializers -Wno-sign-compare -I.
+PKG_CXXFLAGS += -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64
 
 ifeq ($(DEBUG), 1)
-COMMON_CXXFLAGS += -O0 -g
+  PKG_CXXFLAGS += -O0 -g
 else
-COMMON_CXXFLAGS += -O2 -DNDEBUG
+  PKG_CXXFLAGS += -O2 -DNDEBUG
 endif
 
 ifeq ($(ASAN), 1)
-COMMON_CXXFLAGS += -fsanitize=address
-PKG_LDFLAGS += -fsanitize=address
+  PKG_CXXFLAGS += -fsanitize=address
+  PKG_LDFLAGS += -fsanitize=address
 endif
 
 ifeq ($(UBSAN), 1)
-COMMON_CXXFLAGS += -fsanitize=undefined
-PKG_LDFLAGS += -fsanitize=undefined
+  PKG_CXXFLAGS += -fsanitize=undefined
+  PKG_LDFLAGS += -fsanitize=undefined
 endif
 
 ifeq ($(COVERAGE), 1)
-COMMON_CXXFLAGS += -fprofile-arcs -ftest-coverage
-LDFLAGS += --coverage
+  PKG_CXXFLAGS += -fprofile-arcs -ftest-coverage
+  LDFLAGS += --coverage
 endif
 
 PREFIX ?= /usr/local
@@ -121,13 +121,13 @@ $(LIB_ARCHIVE): $(LIB_OBJECTS)
 
 $(OUT)/$(LIB_DIR)/%.o: $(LIB_DIR)/%.cc
 	@mkdir -p $(dir $@)
-	$(CXX) -c $(COMMON_CXXFLAGS) $(PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< -o $@ -MMD -MP -MF $(@:.o=.d)
+	$(CXX) -c $(PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< -o $@ -MMD -MP -MF $(@:.o=.d)
 
 # ---- Binaries
 
 $(OUT)/$(PROJECT): $(PROJECT).cc $(LIB_ARCHIVE)
 	mkdir -p $(OUT)
-	$(CXX) $(COMMON_CXXFLAGS) -Ilib $(PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< $(LIB_ARCHIVE) $(PKG_LDFLAGS) $(LDFLAGS) -o $@
+	$(CXX) -Ilib $(PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< $(LIB_ARCHIVE) $(PKG_LDFLAGS) $(LDFLAGS) -o $@
 
 # ---- Unit Tests
 
@@ -135,13 +135,13 @@ UNIT_TEST = unit_tests
 UNIT_TEST_SOURCES = $(wildcard tests/*.cc)
 UNIT_TEST_OBJECTS = $(addprefix $(OUT)/,$(UNIT_TEST_SOURCES:.cc=.o))
 
-ifeq ($(HAS_GTEST), yes)
+ifeq ($(HAS_GTEST), 1)
 $(OUT)/$(UNIT_TEST): $(UNIT_TEST_OBJECTS) $(LIB_ARCHIVE)
-	$(CXX) $(COMMON_CXXFLAGS) $(PKG_CXXFLAGS) $(UNIT_TEST_PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $^ $(PKG_LDFLAGS) $(UNIT_TEST_PKG_LDFLAGS) $(LDFLAGS) -o $@
+	$(CXX) $(PKG_CXXFLAGS) $(UNIT_TEST_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $^ $(PKG_LDFLAGS) $(UNIT_TEST_LDFLAGS) $(LDFLAGS) -o $@
 
 $(OUT)/tests/%.o: tests/%.cc
 	@mkdir -p $(dir $@)
-	$(CXX) -Ilib -c $(COMMON_CXXFLAGS) $(PKG_CXXFLAGS) $(UNIT_TEST_PKG_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< -o $@ -MMD -MP -MF $(@:.o=.d)
+	$(CXX) -Ilib -c $(PKG_CXXFLAGS) $(UNIT_TEST_CXXFLAGS) $(CPPFLAGS) $(CXXFLAGS) $< -o $@ -MMD -MP -MF $(@:.o=.d)
 
 UNIT_TEST_BIN = $(OUT)/$(UNIT_TEST)
 else
