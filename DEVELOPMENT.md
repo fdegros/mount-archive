@@ -21,7 +21,7 @@ The project follows a stable/development minor versioning scheme:
 - **Even minor versions** (e.g., 1.20, 1.22) are **stable** releases.
 - **Odd minor versions** (e.g., 1.19, 1.21) are **development** versions.
 
-Current state: **1.26 (Stable)**.
+Current state: **1.27 (Development)**.
 
 ## Build and Development
 
