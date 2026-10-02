@@ -53,14 +53,14 @@ endif
 
 # Handle ZIP archives via libzip instead of libarchive (not yet implemented;
 # defaults to off until the libzip-backed reader lands).
-LIBZIP ?= 0
+HAS_LIBZIP := $(shell $(PKG_CONFIG) --exists libzip && echo 1 || echo 0)
+LIBZIP ?= $(HAS_LIBZIP)
 ifeq ($(LIBZIP), 1)
-ifeq ($(shell $(PKG_CONFIG) --exists libzip && echo 1 || echo 0), 0)
-$(error LIBZIP=1 requires libzip, but pkg-config can't find it)
-endif
-
-DEPS += libzip
-PKG_CXXFLAGS += -DLIBZIP=1
+  ifeq ($(HAS_LIBZIP), 0)
+    $(error LIBZIP=1 requires libzip, but pkg-config cannot find it)
+  endif
+  DEPS += libzip
+  PKG_CXXFLAGS += -DLIBZIP=1
 endif
 
 PKG_CXXFLAGS += $(shell $(PKG_CONFIG) --cflags $(DEPS) 2>/dev/null)

@@ -72,9 +72,9 @@ fuse_version = GetFuseVersion()
 logging.info(f'FUSE version: {fuse_version}')
 
 
-def GetLibArchiveVersion():
+def GetLibVersion(name):
     for line in sr.stdout.split('\n'):
-        if line.startswith('libarchive '):
+        if line.startswith(name):
             version_str = line.split()[1]
             version = []
             for part in version_str.split('.'):
@@ -89,8 +89,11 @@ def GetLibArchiveVersion():
     return [0, 0, 0]
 
 
-libarchive_version = GetLibArchiveVersion()
+libarchive_version = GetLibVersion('libarchive')
 logging.info(f'libarchive version: {libarchive_version}')
+
+libzip_version = GetLibVersion('libzip')
+logging.info(f'libzip version: {libzip_version}')
 
 on_mac = sys.platform.startswith('darwin')
 on_linux = sys.platform.startswith('linux')

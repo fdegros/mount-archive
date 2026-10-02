@@ -30,6 +30,10 @@
 #include <termios.h>
 #include <unistd.h>
 
+#ifdef LIBZIP
+#include <zip.h>
+#endif
+
 #include <algorithm>
 #include <atomic>
 #include <cassert>
@@ -130,6 +134,7 @@ fuse_opt const g_fuse_opts[] = {
     {"noatime", offsetof(Context, options.atime), 0},
     {"nobidding", offsetof(Context, options.bidding), 0},
     {"noexternal", offsetof(Context, can_use_external_filters), 0},
+    {"nolibzip", offsetof(Context, options.libzip), 0},
     {"enforce_permissions", offsetof(Context, options.enforce_permissions), 1},
     {"default_permissions", offsetof(Context, options.enforce_permissions), 1},
 #if FUSE_USE_VERSION >= 30
@@ -254,7 +259,12 @@ general options:
     -o noxattrs            no extended attributes
     -o noatime             don't update access times
     -o nobidding           rely on file extension to detect archive format
-    -o noexternal          do not use external programs for decompression
+    -o noexternal          do not use external programs for decompression)"
+#ifdef LIBZIP
+         R"(
+    -o nolibzip            don't use libzip)"
+#endif
+         R"(
     -o enforce_permissions enforce standard UNIX permissions
     -o dmask=M             directory permission mask in octal (default 0022)
     -o fmask=M             file permission mask in octal (default 0022))"
@@ -418,6 +428,12 @@ int main(int const argc, char** const argv) try {
     std::cout << " rpm";
 #endif
     std::cout << "\n";
+#ifdef LIBZIP
+#if LIBZIP_VERSION_MAJOR < 1
+#error "libzip >= 1.0 is required!"
+#endif
+    std::cout << "libzip " << zip_libzip_version() << "\n";
+#endif
     std::cout.flush();
 
     // Forward --version to libfuse so that it can print its own version.
