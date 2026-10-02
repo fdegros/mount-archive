@@ -46,7 +46,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
-#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -199,17 +198,6 @@ void EnsureUtf8() {
   LOG(ERROR) << "Cannot ensure UTF-8 encoding";
   throw ExitCode::GENERIC_FAILURE;
 }
-
-// Guard that executes the given function upon destruction.
-struct Cleanup {
-  std::function<void()> fn;
-
-  ~Cleanup() {
-    if (fn) {
-      fn();
-    }
-  }
-};
 
 // Formatter for numbers using thousand separators.
 class NumPunct : public std::numpunct<char> {

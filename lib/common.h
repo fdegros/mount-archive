@@ -24,6 +24,7 @@
 #endif
 
 #include <ctime>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -33,6 +34,17 @@
 #include "util.h"
 
 namespace fuse_archive {
+
+// Guard that executes the given function upon destruction.
+struct Cleanup {
+  std::function<void()> fn;
+
+  ~Cleanup() {
+    if (fn) {
+      fn();
+    }
+  }
+};
 
 // Possible caching strategies.
 enum class Cache {
@@ -82,12 +94,20 @@ enum class ArchiveFormat : int {
 std::ostream& operator<<(std::ostream& out, ArchiveFormat f);
 
 #ifdef LIBZIP
+enum class ZipError : int;
+std::ostream& operator<<(std::ostream& out, ZipError e);
+
 using ZipArchive = zip_t;
 using ZipFile = zip_file_t;
 
 struct ZipDeleter {
   void operator()(ZipArchive* const z) const { zip_discard(z); }
-  void operator()(ZipFile* const f) const { zip_fclose(f); }
+
+  void operator()(ZipFile* const f) const {
+    if (int const e = zip_fclose(f)) {
+      LOG(WARNING) << "Error while closing ZipFile: " << ZipError(e);
+    }
+  }
 };
 
 using ZipArchivePtr = std::unique_ptr<ZipArchive, ZipDeleter>;
