@@ -93,6 +93,8 @@ struct Reader : bi::list_base_hook<LinkMode> {
   // memcpy instead of an expensive "re-do decompression from the start".
   static ssize_t const rolling_buffer_size = 256 * 1024;
   static ssize_t const rolling_buffer_mask = rolling_buffer_size - 1;
+  static_assert((rolling_buffer_size & rolling_buffer_mask) == 0,
+                "rolling_buffer_size must be a power of 2");
   char rolling_buffer[rolling_buffer_size];
 
   // Destroys the reader and its internal libarchive state.
