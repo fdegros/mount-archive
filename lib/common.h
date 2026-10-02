@@ -53,6 +53,7 @@ struct Options {
   int xattrs = 1;
   int atime = 1;
   int bidding = 1;
+  int libzip = 1;
   int enforce_permissions = 0;
 
 #if FUSE_USE_VERSION >= 30
