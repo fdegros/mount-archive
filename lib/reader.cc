@@ -37,7 +37,7 @@
 
 namespace fuse_archive {
 
-int Reader::count = 0;
+i64 Reader::count = 0;
 
 namespace {
 
