@@ -62,14 +62,14 @@ struct Node {
   // multiple FUSE worker threads at once, e.g. concurrent reads of the same
   // file, or of different hardlinks sharing this Node as their target. Hence
   // the atomic, to avoid a data race on the plain struct.
-  std::atomic<Time> atime = no_time;
+  std::atomic<Time> atime = mtime;
 
-  Time ctime = no_time;
+  Time ctime = mtime;
 
   // Time this entry was created, as recorded in the archive. Only exposed via
   // struct stat's st_birthtim(espec) on Apple and FreeBSD; Linux's struct stat
   // has no such field (see the statx FUSE operation instead).
-  Time btime = no_time;
+  Time btime = mtime;
 
   // --- 8-byte members (Fixed size) ---
 

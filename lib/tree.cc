@@ -108,6 +108,10 @@ Segments GetSegments(std::string_view const path) {
 void SetTimestamps(Node* const node,
                    Entry* const entry,
                    const Time& fallback_mtime) {
+  assert(node);
+  assert(entry);
+  assert(HasTime(fallback_mtime));
+
   node->mtime = archive_entry_mtime_is_set(entry)
                     ? Time{.tv_sec = archive_entry_mtime(entry),
                            .tv_nsec = archive_entry_mtime_nsec(entry)}
@@ -310,10 +314,10 @@ Node* Tree::GetOrCreateDirNode(std::string_view path) {
   while (++i < segments.size()) {
     const Segment& segment = segments[i];
     Node::Ptr child(new Node{
-        .mtime = now_,
-        .atime = now_,
-        .ctime = now_,
-        .btime = now_,
+        .mtime = node->mtime,
+        .atime = node->atime.load(std::memory_order_relaxed),
+        .ctime = node->ctime,
+        .btime = node->btime,
         .path_length = segment.path_length,
         .path_hash = segment.path_hash,
         .name = std::string(segment.name),
@@ -546,19 +550,13 @@ void Tree::ProcessEntry(Reader& r, std::string& path, Node* const local_root) {
     return;
   }
 
-  // Modification time to use as a fallback for entries that don't carry
-  // their own: the archive file's own mtime, or the current time if that
-  // isn't available.
-  const Time& fallback_mtime =
-      HasTime(current_archive->mtime) ? current_archive->mtime : now_;
-
   // Is this entry a directory?
   if (ft == FileType::Directory) {
     assert(options_.dirs);
     Node* const node = GetOrCreateDirNode(path);
     assert(node);
 
-    SetTimestamps(node, e, fallback_mtime);
+    SetTimestamps(node, e, current_archive->mtime);
 
     if (options_.enforce_permissions) {
       node->uid = archive_entry_uid(e);
@@ -594,7 +592,7 @@ void Tree::ProcessEntry(Reader& r, std::string& path, Node* const local_root) {
                                   (0666 & ~options_.fmask)),
   });
 
-  SetTimestamps(node.get(), e, fallback_mtime);
+  SetTimestamps(node.get(), e, current_archive->mtime);
 
   inode_count_ += 1;
   block_count_ += 1;
@@ -687,6 +685,8 @@ void Tree::Load(std::span<const std::string> const archives) {
     archives_.push_back({.path = archive_path});
   }
 
+  Time first_mtime = no_time;
+
   // Check the archives before starting.
   for (ArchiveDescriptor& archive : archives_) {
     try {
@@ -713,6 +713,10 @@ void Tree::Load(std::span<const std::string> const archives) {
 #else
         archive.mtime = z.st_mtim;
 #endif
+
+        if (!HasTime(first_mtime)) {
+          first_mtime = archive.mtime;
+        }
       }
     } catch (ExitCode const error) {
       archive.fd.Close();
@@ -726,11 +730,12 @@ void Tree::Load(std::span<const std::string> const archives) {
   // Create the root directory.
   assert(!root_);
   {
+    if (!HasTime(first_mtime)) {
+      first_mtime = now_;
+    }
+
     Node::Ptr root(new Node{
-        .mtime = now_,
-        .atime = now_,
-        .ctime = now_,
-        .btime = now_,
+        .mtime = first_mtime,
         .name = "/",
         .uid = uid_,
         .gid = gid_,
@@ -778,6 +783,7 @@ void Tree::Load(std::span<const std::string> const archives) {
             .name_without_extension = name,
             .fd = std::move(fd),
             .size = size,
+            .mtime = archive.mtime,
             .format = archive.format,
             .filter_count = archive.filter_count,
             .is_seekable_format = false,
@@ -790,11 +796,9 @@ void Tree::Load(std::span<const std::string> const archives) {
       Node* local_root = root_;
       if (!options_.merge) {
         // Create a directory node for this archive.
+        assert(HasTime(archive.mtime));
         Node::Ptr archive_node(new Node{
-            .mtime = now_,
-            .atime = now_,
-            .ctime = now_,
-            .btime = now_,
+            .mtime = archive.mtime,
             .name = archive.name_without_extension,
             .uid = uid_,
             .gid = gid_,
