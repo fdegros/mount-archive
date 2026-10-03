@@ -138,8 +138,7 @@ void SetTimestamps(Node* const node,
 }
 
 #ifdef LIBZIP
-bool OpenWithLibzip(ArchiveDescriptor* const archive,
-                    const std::unordered_set<std::string_view>& zip_exts) {
+bool OpenWithLibzip(ArchiveDescriptor* const archive) {
   assert(archive);
   Path const path(archive->path);
 
@@ -149,7 +148,11 @@ bool OpenWithLibzip(ArchiveDescriptor* const archive,
     return false;
   }
 
-  // Check if the extension is in zip_exts.
+  // Check if the extension indicates a ZIP.
+  static std::unordered_set<std::string_view> const zip_exts = {
+      "aab",  "apk", "cbz", "crx",  "docx", "epub", "ipa",
+      "jar",  "odf", "odg", "odp",  "ods",  "odt",  "ppsx",
+      "pptx", "war", "whl", "xlsx", "xpi",  "zip",  "zipx"};
   if (!zip_exts.contains(ToLower(path.substr(i + 1)))) {
     return false;
   }
@@ -803,11 +806,7 @@ void Tree::Load(std::span<const std::string> const archives) {
 
 #ifdef LIBZIP
       if (options_.libzip) {
-        static std::unordered_set<std::string_view> const zip_exts = {
-            "aab",  "apk", "cbz", "crx",  "docx", "epub", "ipa",
-            "jar",  "odf", "odg", "odp",  "ods",  "odt",  "ppsx",
-            "pptx", "war", "whl", "xlsx", "xpi",  "zip",  "zipx"};
-        OpenWithLibzip(&archive, zip_exts);
+        OpenWithLibzip(&archive);
       }
 #endif
 
@@ -842,9 +841,7 @@ void Tree::Load(std::span<const std::string> const archives) {
 
 #ifdef LIBZIP
         if (options_.libzip) {
-          static std::unordered_set<std::string_view> const zip_exts = {
-              "jar", "war", "zip", "zipx"};
-          OpenWithLibzip(&archive, zip_exts);
+          OpenWithLibzip(&archive);
         }
 #endif
         r = std::make_unique<Reader>(&archive, *this);
