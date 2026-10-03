@@ -51,6 +51,18 @@ ifeq ($(OS), FreeBSD)
   PKG_CXXFLAGS += -I/usr/local/include
 endif
 
+# Handle ZIP archives via libzip instead of libarchive (not yet implemented;
+# defaults to off until the libzip-backed reader lands).
+HAS_LIBZIP := $(shell $(PKG_CONFIG) --exists libzip && echo 1 || echo 0)
+LIBZIP ?= $(HAS_LIBZIP)
+ifeq ($(LIBZIP), 1)
+  ifeq ($(HAS_LIBZIP), 0)
+    $(error LIBZIP=1 requires libzip, but pkg-config cannot find it)
+  endif
+  DEPS += libzip
+  PKG_CXXFLAGS += -DLIBZIP=1
+endif
+
 PKG_CXXFLAGS += $(shell $(PKG_CONFIG) --cflags $(DEPS) 2>/dev/null)
 PKG_LDFLAGS += $(shell $(PKG_CONFIG) --libs $(DEPS) 2>/dev/null)
 

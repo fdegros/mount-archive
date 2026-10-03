@@ -17,8 +17,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libarchive-dev libboost-dev libfuse3-dev libgtest-dev \
-            pkg-config python3 mount \
+            libarchive-dev libboost-dev libfuse3-dev libgtest-dev libzip-dev \
+            fuse3 pkg-config python3 mount \
             brotli coreutils gpg lrzip lzip lzop lz4 ncompress
       - name: Build and test
         run: |
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          brew install boost libarchive googletest pkg-config
+          brew install boost libarchive libzip googletest pkg-config
           # Only needed to get fuse.h and the fuse3.pc pkg-config file for
           # compiling; the bundled kernel extension is never loaded.
           brew install --cask macfuse
@@ -65,7 +65,7 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkg install -y pkgconf boost-libs libarchive fusefs-libs3 \
+            pkg install -y pkgconf boost-libs libarchive libzip fusefs-libs3 \
               googletest python3 gmake gnupg
           run: |
             kldload fusefs || true

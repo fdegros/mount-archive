@@ -94,4 +94,13 @@ std::ostream& operator<<(std::ostream& out, FileType const t) {
   return out << "Unknown";
 }
 
+#ifdef LIBZIP
+std::ostream& operator<<(std::ostream& out, ZipError const e) {
+  zip_error_t ze;
+  zip_error_init_with_code(&ze, static_cast<int>(e));
+  Cleanup const guard([&ze] { zip_error_fini(&ze); });
+  return out << zip_error_strerror(&ze);
+}
+#endif
+
 }  // namespace fuse_archive

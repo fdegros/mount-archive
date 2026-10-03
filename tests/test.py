@@ -17,11 +17,13 @@
 import argparse
 import ctypes
 import errno
+import gzip
 import hashlib
 import logging
 import os
 import pprint
 import random
+import shutil
 import stat
 import subprocess
 import sys
@@ -71,9 +73,9 @@ fuse_version = GetFuseVersion()
 logging.info(f'FUSE version: {fuse_version}')
 
 
-def GetLibArchiveVersion():
+def GetLibVersion(name):
     for line in sr.stdout.split('\n'):
-        if line.startswith('libarchive '):
+        if line.startswith(name):
             version_str = line.split()[1]
             version = []
             for part in version_str.split('.'):
@@ -88,8 +90,11 @@ def GetLibArchiveVersion():
     return [0, 0, 0]
 
 
-lib_archive_version = GetLibArchiveVersion()
-logging.info(f'libarchive version: {lib_archive_version}')
+libarchive_version = GetLibVersion('libarchive')
+logging.info(f'libarchive version: {libarchive_version}')
+
+libzip_version = GetLibVersion('libzip')
+logging.info(f'libzip version: {libzip_version}')
 
 on_mac = sys.platform.startswith('darwin')
 on_linux = sys.platform.startswith('linux')
@@ -399,13 +404,13 @@ has_tar = CanRun(['tar', '--version'])
 
 has_gpg = CanRun(['gpg', '--version'])
 if has_gpg:
-    if on_mac and lib_archive_version < [3, 9, 0]:
+    if on_mac and libarchive_version < [3, 9, 0]:
         # On macOS, even if the `gpg` program is present, libarchive can't use it
         # because of https://github.com/libarchive/libarchive/issues/3539
         has_gpg = False
         logging.info(f'Will skip tests relying on gpg')
 
-    if on_linux and lib_archive_version < [3, 8, 2]:
+    if on_linux and libarchive_version < [3, 8, 2]:
         # On Linux, even if the `gpg` program is present, libarchive < 3.8.2
         # can't use it because of
         # https://github.com/libarchive/libarchive/issues/3539
@@ -1632,6 +1637,71 @@ def TestMultiArchive(options=[]):
         'file1 (1)': {'size': 6, 'md5': '5149d403009a139c7e085405ef762e1a'},
     }
     MountArchiveAndCheckTree([zip1, zip1], want_tree, options=options)
+
+
+# Tests how the timestamps of files and directories are derived.
+def TestTimestamps():
+    # archive.zip only records an atime (in an extended timestamp field) for
+    # some entries. The ctime and the birth time are missing, or set to zero by
+    # libarchive, and should fall back to the entry's own mtime rather than
+    # showing up as the Unix epoch.
+    s = 1_000_000_000
+    want_tree = {
+        'github-tags.json': {
+            'atime': 1620042264 * s,
+            'mtime': 1597241062 * s,
+            'ctime': 1597241062 * s,
+            'btime': 1597241062 * s,
+        },
+        'hello.sh': {
+            'atime': 1620042264 * s,
+            'mtime': 1620022795 * s,
+            'ctime': 1620022795 * s,
+            'btime': 1620022795 * s,
+        },
+        'romeo.txt': {
+            'atime': 1620042264 * s,
+            'mtime': 1580883024 * s,
+            'ctime': 1580883024 * s,
+            'btime': 1580883024 * s,
+        },
+    }
+    MountArchiveAndCheckTree('archive.zip',
+                             want_tree,
+                             strict=False,
+                             use_md5=False)
+
+    # A ZIP file compressed with another filter is cached in full before being
+    # mounted. With nomerge, the directory created for this archive should get
+    # the timestamps of the archive file, even though the archive has been
+    # replaced by the cache file at this point.
+    if not has_gzip and not has_zlib: return
+
+    mtime = 1_600_000_000
+    with tempfile.TemporaryDirectory(dir=tmp_dir_base) as dir:
+        zip_name = os.path.join(dir, 'archive.zip.gz')
+        with open(os.path.join(script_dir, 'data', 'archive.zip'), 'rb') as src:
+            with gzip.open(zip_name, 'wb') as dst:
+                shutil.copyfileobj(src, dst)
+        os.utime(zip_name, (mtime, mtime))
+
+        want_tree = {
+            'archive.zip': {
+                'mode': 'drwxr-xr-x',
+                'atime': mtime * s,
+                'mtime': mtime * s,
+                'ctime': mtime * s,
+                'btime': mtime * s,
+            },
+            'archive.zip/hello.sh': {
+                'mtime': 1620022795 * s,
+            },
+        }
+        MountArchiveAndCheckTree(zip_name,
+                                 want_tree,
+                                 options=['-o', 'nomerge'],
+                                 strict=False,
+                                 use_md5=False)
 
 
 # Tests SUID, SGID and sticky bits with -o enforce_permissions.
@@ -3021,6 +3091,8 @@ TestMultiArchive()
 TestMultiArchive(['-o', 'nocache'])
 TestMultiArchive(['-o', 'lazycache'])
 if has_memcache: TestMultiArchive(['-o', 'memcache'])
+
+TestTimestamps()
 
 TestSpecialPermissions()
 TestSpecialPermissions(['-o', 'nocache'])
