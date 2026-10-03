@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <algorithm>
 #include <climits>
+#include <unordered_set>
 #include <vector>
 
 #include <boost/functional/hash.hpp>
@@ -135,6 +136,45 @@ void SetTimestamps(Node* const node,
                            .tv_nsec = archive_entry_birthtime_nsec(entry)}
                     : node->mtime;
 }
+
+#ifdef LIBZIP
+bool OpenWithLibzip(ArchiveDescriptor* const archive,
+                    const std::unordered_set<std::string_view>& zip_exts) {
+  assert(archive);
+  Path const path(archive->path);
+
+  // Get the final filename extension in lower case and without the dot.
+  size_t const i = path.FinalExtensionPosition();
+  if (i >= path.size()) {
+    return false;
+  }
+
+  // Check if the extension is in zip_exts.
+  if (!zip_exts.contains(ToLower(path.substr(i + 1)))) {
+    return false;
+  }
+
+  // Try to open the archive with libzip.
+  Timer const timer;
+  FileDescriptor fd(dup(archive->fd));
+  if (!fd.IsValid()) {
+    PLOG(ERROR) << "Cannot dup file descriptor of " << path;
+    return false;
+  }
+
+  int error = 0;
+  ZipArchivePtr zip_archive(zip_fdopen(fd, ZIP_RDONLY, &error));
+  if (!zip_archive) {
+    LOG(INFO) << "Cannot open " << path << " with libzip: " << ZipError(error);
+    return false;
+  }
+
+  fd.Release();
+  LOG(INFO) << "Opened " << path << " with libzip in " << timer;
+  archive->zip_archive = std::move(zip_archive);
+  return true;
+}
+#endif
 
 }  // namespace
 
@@ -763,22 +803,11 @@ void Tree::Load(std::span<const std::string> const archives) {
 
 #ifdef LIBZIP
       if (options_.libzip) {
-        // Try to open the archive with libzip.
-        if (FileDescriptor fd(dup(archive.fd)); fd.IsValid()) {
-          int error = 0;
-          ZipArchivePtr zip_archive(zip_fdopen(fd, ZIP_RDONLY, &error));
-          if (zip_archive) {
-            fd.Release();
-            LOG(INFO) << "Opened " << Path(archive.path) << " with libzip in "
-                      << timer;
-            archive.zip_archive = std::move(zip_archive);
-          } else {
-            LOG(INFO) << "Cannot open " << Path(archive.path)
-                      << " with libzip: " << ZipError(error);
-          }
-        } else {
-          PLOG(ERROR) << "Cannot dup file descriptor of " << Path(archive.path);
-        }
+        static std::unordered_set<std::string_view> const zip_exts = {
+            "aab",  "apk", "cbz", "crx",  "docx", "epub", "ipa",
+            "jar",  "odf", "odg", "odp",  "ods",  "odt",  "ppsx",
+            "pptx", "war", "whl", "xlsx", "xpi",  "zip",  "zipx"};
+        OpenWithLibzip(&archive, zip_exts);
       }
 #endif
 
@@ -810,6 +839,14 @@ void Tree::Load(std::span<const std::string> const archives) {
             .filter_count = archive.filter_count,
             .is_seekable_format = false,
         };
+
+#ifdef LIBZIP
+        if (options_.libzip) {
+          static std::unordered_set<std::string_view> const zip_exts = {
+              "jar", "war", "zip", "zipx"};
+          OpenWithLibzip(&archive, zip_exts);
+        }
+#endif
         r = std::make_unique<Reader>(&archive, *this);
         r->should_print_progress = LOG_IS_ON(INFO) && archive.size > 0;
       }
