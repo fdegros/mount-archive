@@ -135,7 +135,7 @@ Stat Node::GetStat() const {
   z.st_blocks = GetBlockCount();
   z.st_rdev = dev;
 
-  const timespec atime = t->atime.load(std::memory_order_relaxed);
+  const Time atime = t->atime.load(std::memory_order_relaxed);
 
 #ifdef __APPLE__
   z.st_atimespec = atime;

@@ -27,6 +27,7 @@
 #include <chrono>
 #include <cstdint>
 #include <ctime>
+#include <limits>
 #include <memory>
 #include <ostream>
 #include <sstream>
@@ -243,6 +244,20 @@ FileDescriptor CreateCacheFile(bool memcache = false);
 
 // Validates that a cache file descriptor is valid and points to an empty file.
 void CheckCacheFile(const FileDescriptor& fd);
+
+using Time = timespec;
+
+constexpr Time no_time{.tv_sec = std::numeric_limits<time_t>::min()};
+
+inline bool HasTime(const Time& t) {
+  return t.tv_sec != no_time.tv_sec;
+}
+
+inline Time Now() {
+  Time now;
+  clock_gettime(CLOCK_REALTIME, &now);
+  return now;
+}
 
 }  // namespace fuse_archive
 

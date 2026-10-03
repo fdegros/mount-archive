@@ -107,28 +107,28 @@ Segments GetSegments(std::string_view const path) {
 // doesn't track them.
 void SetTimestamps(Node* const node,
                    Entry* const entry,
-                   const timespec& fallback_mtime) {
+                   const Time& fallback_mtime) {
   node->mtime = archive_entry_mtime_is_set(entry)
-                    ? timespec{.tv_sec = archive_entry_mtime(entry),
-                               .tv_nsec = archive_entry_mtime_nsec(entry)}
+                    ? Time{.tv_sec = archive_entry_mtime(entry),
+                           .tv_nsec = archive_entry_mtime_nsec(entry)}
                     : fallback_mtime;
 
   node->atime =
       archive_entry_atime_is_set(entry) && archive_entry_atime(entry) != 0
-          ? timespec{.tv_sec = archive_entry_atime(entry),
-                     .tv_nsec = archive_entry_atime_nsec(entry)}
+          ? Time{.tv_sec = archive_entry_atime(entry),
+                 .tv_nsec = archive_entry_atime_nsec(entry)}
           : node->mtime;
 
   node->ctime =
       archive_entry_ctime_is_set(entry) && archive_entry_ctime(entry) != 0
-          ? timespec{.tv_sec = archive_entry_ctime(entry),
-                     .tv_nsec = archive_entry_ctime_nsec(entry)}
+          ? Time{.tv_sec = archive_entry_ctime(entry),
+                 .tv_nsec = archive_entry_ctime_nsec(entry)}
           : node->mtime;
 
   node->btime = archive_entry_birthtime_is_set(entry) &&
                         archive_entry_birthtime(entry) != 0
-                    ? timespec{.tv_sec = archive_entry_birthtime(entry),
-                               .tv_nsec = archive_entry_birthtime_nsec(entry)}
+                    ? Time{.tv_sec = archive_entry_birthtime(entry),
+                           .tv_nsec = archive_entry_birthtime_nsec(entry)}
                     : node->mtime;
 }
 
@@ -310,9 +310,10 @@ Node* Tree::GetOrCreateDirNode(std::string_view path) {
   while (++i < segments.size()) {
     const Segment& segment = segments[i];
     Node::Ptr child(new Node{
-        .mtime = {.tv_sec = now_},
-        .atime = timespec{.tv_sec = now_},
-        .ctime = {.tv_sec = now_},
+        .mtime = now_,
+        .atime = now_,
+        .ctime = now_,
+        .btime = now_,
         .path_length = segment.path_length,
         .path_hash = segment.path_hash,
         .name = std::string(segment.name),
@@ -388,6 +389,7 @@ void Tree::ResolveHardlinks() {
         .mtime = target->mtime,
         .atime = target->atime.load(std::memory_order_relaxed),
         .ctime = target->ctime,
+        .btime = target->btime,
         .index_within_archive = target->index_within_archive,
         .ino = target->ino,
         .size = target->size,
@@ -547,9 +549,8 @@ void Tree::ProcessEntry(Reader& r, std::string& path, Node* const local_root) {
   // Modification time to use as a fallback for entries that don't carry
   // their own: the archive file's own mtime, or the current time if that
   // isn't available.
-  timespec const fallback_mtime = current_archive->mtime.tv_sec != 0
-                                      ? current_archive->mtime
-                                      : timespec{.tv_sec = now_};
+  const Time& fallback_mtime =
+      HasTime(current_archive->mtime) ? current_archive->mtime : now_;
 
   // Is this entry a directory?
   if (ft == FileType::Directory) {
@@ -726,9 +727,10 @@ void Tree::Load(std::span<const std::string> const archives) {
   assert(!root_);
   {
     Node::Ptr root(new Node{
-        .mtime = {.tv_sec = now_},
-        .atime = timespec{.tv_sec = now_},
-        .ctime = {.tv_sec = now_},
+        .mtime = now_,
+        .atime = now_,
+        .ctime = now_,
+        .btime = now_,
         .name = "/",
         .uid = uid_,
         .gid = gid_,
@@ -789,9 +791,10 @@ void Tree::Load(std::span<const std::string> const archives) {
       if (!options_.merge) {
         // Create a directory node for this archive.
         Node::Ptr archive_node(new Node{
-            .mtime = {.tv_sec = now_},
-            .atime = timespec{.tv_sec = now_},
-            .ctime = {.tv_sec = now_},
+            .mtime = now_,
+            .atime = now_,
+            .ctime = now_,
+            .btime = now_,
             .name = archive.name_without_extension,
             .uid = uid_,
             .gid = gid_,
@@ -910,6 +913,7 @@ void Tree::Trim(Node& a) {
                 std::memory_order_relaxed);
   a.mtime = p->mtime;
   a.ctime = p->ctime;
+  a.btime = p->btime;
   a.nlink = p->nlink;
   assert(!a.hardlink_target);
   assert(!p->hardlink_target);

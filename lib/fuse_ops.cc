@@ -106,7 +106,7 @@ int GetAttr(const char* const path,
 
 #ifdef FUSE_HAS_STATX
 // Converts a timespec to a statx_timestamp.
-statx_timestamp ToStatxTimestamp(const timespec& t) {
+statx_timestamp ToStatxTimestamp(const Time& t) {
   return {.tv_sec = t.tv_sec, .tv_nsec = static_cast<uint32_t>(t.tv_nsec)};
 }
 

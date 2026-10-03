@@ -92,7 +92,7 @@ struct ArchiveDescriptor {
 
   // Modification time of this archive file. Used as a fallback for archive
   // entries that don't carry their own modification time.
-  timespec mtime = {};
+  Time mtime = no_time;
 
   // Format of this archive.
   ArchiveFormat format = ArchiveFormat::NONE;

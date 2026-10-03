@@ -228,7 +228,7 @@ class Tree {
   // Environmental constants captured at tree creation.
   uid_t const uid_ = getuid();
   gid_t const gid_ = getgid();
-  time_t const now_ = SystemClock::to_time_t(SystemClock::now());
+  Time const now_ = Now();
 
   // Statistics for the entire tree.
   i64 block_count_ = 1;
