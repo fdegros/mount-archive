@@ -56,9 +56,7 @@ class FileDescriptor {
   }
 
   // Releases and returns the underlying file descriptor without closing it.
-  int Release() noexcept {
-    return std::exchange(fd_, -1);
-  }
+  int Release() noexcept { return std::exchange(fd_, -1); }
 
   // Assigns ownership from another instance.
   FileDescriptor& operator=(FileDescriptor other) noexcept {
