@@ -760,6 +760,28 @@ void Tree::Load(std::span<const std::string> const archives) {
 
     try {
       Timer const timer;
+
+#ifdef LIBZIP
+      if (options_.libzip) {
+        // Try to open the archive with libzip.
+        if (FileDescriptor fd(dup(archive.fd)); fd.IsValid()) {
+          int error = 0;
+          ZipArchivePtr zip_archive(zip_fdopen(fd, ZIP_RDONLY, &error));
+          if (zip_archive) {
+            fd.Release();
+            LOG(INFO) << "Opened " << Path(archive.path) << " with libzip in "
+                      << timer;
+            archive.zip_archive = std::move(zip_archive);
+          } else {
+            LOG(INFO) << "Cannot open " << Path(archive.path)
+                      << " with libzip: " << ZipError(error);
+          }
+        } else {
+          PLOG(ERROR) << "Cannot dup file descriptor of " << Path(archive.path);
+        }
+      }
+#endif
+
       std::unique_ptr<Reader> r = std::make_unique<Reader>(&archive, *this);
       r->should_print_progress = LOG_IS_ON(INFO) && archive.size > 0;
 
