@@ -73,6 +73,16 @@ Node* FindNode(std::string_view const path) {
   return GetTree().FindNode(path);
 }
 
+// Tells if the given open flags contain O_NOATIME, which asks not to update the
+// access time. Always false on systems that don't provide this flag.
+bool HasNoAtime(int const flags) {
+#ifdef O_NOATIME
+  return (flags & O_NOATIME) != 0;
+#else
+  return false;
+#endif
+}
+
 // Gets file attributes.
 int GetAttr(const char* const path,
 #if FUSE_USE_VERSION >= 30
@@ -384,10 +394,10 @@ int Read(const char*,
   Node* const t = node->GetTarget();
   assert(t);
 
-  if (GetTree().GetOptions().atime) {
-    timespec now;
-    clock_gettime(CLOCK_REALTIME, &now);
-    t->atime.store(now, std::memory_order_relaxed);
+  // Check the flags on every read: they can be changed after open() with
+  // fcntl(F_SETFL).
+  if (GetTree().GetOptions().atime && !HasNoAtime(fi->flags)) {
+    t->atime.store(Now(), std::memory_order_relaxed);
   }
 
   i64 const size = t->size;
@@ -537,9 +547,13 @@ int OpenDir(const char* const path, fuse_file_info* const fi) {
     return -ENOTDIR;
   }
 
+  // Unlike read(), readdir() isn't given the open flags, so remember here
+  // whether O_NOATIME was set. This is stored in the lowest bit of the handle,
+  // which is free because Node is aligned.
   assert(fi);
   static_assert(sizeof(fi->fh) >= sizeof(Node*));
-  fi->fh = reinterpret_cast<uintptr_t>(n);
+  static_assert(alignof(Node) >= 2);
+  fi->fh = reinterpret_cast<uintptr_t>(n) | (HasNoAtime(fi->flags) ? 1 : 0);
 
 #if FUSE_USE_VERSION >= 30
   fi->cache_readdir = true;
@@ -562,14 +576,12 @@ int ReadDir(const char*,
   assert(filler);
   assert(fi);
 
-  Node* const n = reinterpret_cast<Node*>(fi->fh);
+  Node* const n = reinterpret_cast<Node*>(fi->fh & ~uintptr_t(1));
   assert(n);
   assert(n->IsDir());
 
-  if (GetTree().GetOptions().atime) {
-    timespec now;
-    clock_gettime(CLOCK_REALTIME, &now);
-    n->atime.store(now, std::memory_order_relaxed);
+  if (GetTree().GetOptions().atime && !(fi->fh & 1)) {
+    n->atime.store(Now(), std::memory_order_relaxed);
   }
 
 #if FUSE_USE_VERSION >= 30

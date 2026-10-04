@@ -448,6 +448,86 @@ TEST_F(FUSETest, ReadDir) {
               data.names.end());
 }
 
+// Checks that read() updates the access time of the file, unless O_NOATIME is
+// set.
+TEST_F(FUSETest, ReadAtime) {
+  tree_.Load(std::vector<std::string>{"tests/data/archive.tar"});
+  Node* const n = tree_.FindNode("/romeo.txt");
+  ASSERT_NE(n, nullptr);
+
+  fuse_file_info fi;
+  std::memset(&fi, 0, sizeof(fi));
+  ASSERT_EQ(ops_.open("/romeo.txt", &fi), 0);
+
+  const Time old{.tv_sec = 1'000'000'000};
+  char buf[16];
+
+  // The access time is updated by default.
+  n->atime.store(old);
+  EXPECT_GT(ops_.read("/romeo.txt", buf, sizeof(buf), 0, &fi), 0);
+  EXPECT_GT(n->atime.load().tv_sec, old.tv_sec);
+
+#ifdef O_NOATIME
+  // The flag is looked up on every read, because it can be set after open().
+  n->atime.store(old);
+  fi.flags |= O_NOATIME;
+  EXPECT_GT(ops_.read("/romeo.txt", buf, sizeof(buf), 0, &fi), 0);
+  EXPECT_EQ(n->atime.load().tv_sec, old.tv_sec);
+  EXPECT_EQ(n->atime.load().tv_nsec, old.tv_nsec);
+
+  // ...and it can also be cleared.
+  fi.flags &= ~O_NOATIME;
+  EXPECT_GT(ops_.read("/romeo.txt", buf, sizeof(buf), 0, &fi), 0);
+  EXPECT_GT(n->atime.load().tv_sec, old.tv_sec);
+#endif
+
+  EXPECT_EQ(ops_.release("/romeo.txt", &fi), 0);
+}
+
+// Checks that readdir() updates the access time of the directory, unless the
+// directory was opened with O_NOATIME.
+TEST_F(FUSETest, ReadDirAtime) {
+  tree_.Load(std::vector<std::string>{"tests/data/archive.tar"});
+  Node* const n = tree_.FindNode("/");
+  ASSERT_NE(n, nullptr);
+
+  auto filler = [](void*, const char*, const struct stat*, off_t
+#if FUSE_USE_VERSION >= 30
+                   ,
+                   enum fuse_fill_dir_flags
+#endif
+                ) { return 0; };
+
+  const Time old{.tv_sec = 1'000'000'000};
+
+  for (const int flags : {0
+#ifdef O_NOATIME
+                          ,
+                          O_NOATIME
+#endif
+       }) {
+    fuse_file_info fi;
+    std::memset(&fi, 0, sizeof(fi));
+    fi.flags = flags;
+    ASSERT_EQ(ops_.opendir("/", &fi), 0);
+
+    n->atime.store(old);
+#if FUSE_USE_VERSION >= 30
+    EXPECT_EQ(ops_.readdir("/", nullptr, filler, 0, &fi, (fuse_readdir_flags)0),
+              0);
+#else
+    EXPECT_EQ(ops_.readdir("/", nullptr, filler, 0, &fi), 0);
+#endif
+
+    if (flags == 0) {
+      EXPECT_GT(n->atime.load().tv_sec, old.tv_sec);
+    } else {
+      EXPECT_EQ(n->atime.load().tv_sec, old.tv_sec);
+      EXPECT_EQ(n->atime.load().tv_nsec, old.tv_nsec);
+    }
+  }
+}
+
 TEST_F(FUSETest, StatFs) {
   tree_.Load(std::vector<std::string>{"tests/data/archive.tar"});
   StatVfs z;
