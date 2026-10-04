@@ -130,6 +130,7 @@ void ThrowExitCode(std::string_view const e) {
       "Encrypted file is unsupported",
       "Encryption is not supported",
       "RAR encryption support unavailable",
+      "Reading encrypted data is not currently supported",
       "The archive header is encrypted, but currently not supported",
       "The file content is encrypted, but currently not supported",
       "Unsupported encryption format",

@@ -94,4 +94,29 @@ std::ostream& operator<<(std::ostream& out, FileType const t) {
   return out << "Unknown";
 }
 
+[[noreturn]]
+void ThrowExitCode(Archive* const archive, ExitCode const ec) {
+  assert(archive);
+
+  switch (archive_errno(archive)) {
+#ifdef ARCHIVE_ERRNO_PASSPHRASE_REQUIRED
+    case ARCHIVE_ERRNO_PASSPHRASE_REQUIRED:
+      throw ExitCode::PASSPHRASE_REQUIRED;
+#endif
+
+#ifdef ARCHIVE_ERRNO_PASSPHRASE_INCORRECT
+    case ARCHIVE_ERRNO_PASSPHRASE_INCORRECT:
+      throw ExitCode::PASSPHRASE_INCORRECT;
+#endif
+
+#ifdef ARCHIVE_ERRNO_ENCRYPTION_UNSUPPORTED
+    case ARCHIVE_ERRNO_ENCRYPTION_UNSUPPORTED:
+      throw ExitCode::PASSPHRASE_NOT_SUPPORTED;
+#endif
+  }
+
+  ThrowExitCode(GetErrorString(archive));
+  throw ec;
+}
+
 }  // namespace fuse_archive

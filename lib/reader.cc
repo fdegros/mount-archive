@@ -174,11 +174,9 @@ Entry* Reader::NextEntry() {
 
       case ARCHIVE_FAILED:
       case ARCHIVE_FATAL:
-        std::string_view const error = GetErrorString(archive.get());
         LOG(ERROR) << "Cannot advance to entry " << index_within_archive << ": "
-                   << error;
-        ThrowExitCode(error);
-        throw ExitCode::INVALID_ARCHIVE_CONTENTS;
+                   << GetErrorString(archive.get());
+        ThrowExitCode(archive.get(), ExitCode::INVALID_ARCHIVE_CONTENTS);
     }
   }
 }
@@ -280,10 +278,9 @@ i64 Reader::GetEntrySize() {
 
       case ARCHIVE_FAILED:
       case ARCHIVE_FATAL:
-        std::string_view const error = GetErrorString(archive.get());
-        LOG(ERROR) << "Cannot read data from archive: " << error;
-        ThrowExitCode(error);
-        throw ExitCode::INVALID_ARCHIVE_CONTENTS;
+        LOG(ERROR) << "Cannot read data from archive: "
+                   << GetErrorString(archive.get());
+        ThrowExitCode(archive.get(), ExitCode::INVALID_ARCHIVE_CONTENTS);
     }
   }
 }
@@ -322,10 +319,9 @@ i64 Reader::Read(char* dst_ptr, i64 dst_len) {
         continue;
       }
 
-      std::string_view const error = GetErrorString(archive.get());
-      LOG(ERROR) << "Cannot read data from archive: " << error;
-      ThrowExitCode(error);
-      throw ExitCode::INVALID_ARCHIVE_CONTENTS;
+      LOG(ERROR) << "Cannot read data from archive: "
+                 << GetErrorString(archive.get());
+      ThrowExitCode(archive.get(), ExitCode::INVALID_ARCHIVE_CONTENTS);
     }
 
     assert(n > 0);
@@ -483,8 +479,7 @@ i64 Reader::CacheEntryData(const FileDescriptor& dest_fd,
     }
 
     LOG(ERROR) << "Cannot read archive entry data: " << GetErrorString(a);
-    ThrowExitCode(GetErrorString(a));
-    throw ExitCode::INVALID_ARCHIVE_CONTENTS;
+    ThrowExitCode(a, ExitCode::INVALID_ARCHIVE_CONTENTS);
   }
 } catch (...) {
   // In case of error, erase the data of the partially cached file.
@@ -509,10 +504,9 @@ void Reader::Check(int const status) const {
       return;
 
     default:
-      std::string_view const error = GetErrorString(a);
-      LOG(ERROR) << "Cannot open " << Path(descriptor->path) << ": " << error;
-      ThrowExitCode(error);
-      throw ExitCode::UNKNOWN_ARCHIVE_FORMAT;
+      LOG(ERROR) << "Cannot open " << Path(descriptor->path) << ": "
+                 << GetErrorString(a);
+      ThrowExitCode(a, ExitCode::UNKNOWN_ARCHIVE_FORMAT);
   }
 }
 

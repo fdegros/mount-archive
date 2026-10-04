@@ -132,6 +132,10 @@ struct ArchiveDeleter {
 
 using ArchivePtr = std::unique_ptr<Archive, ArchiveDeleter>;
 
+// Checks the archive's error status and throws the corresponding ExitCode,
+// defaulting to `ec`.
+[[noreturn]] void ThrowExitCode(Archive* archive, ExitCode const ec);
+
 }  // namespace fuse_archive
 
 #endif  // LIB_COMMON_H
