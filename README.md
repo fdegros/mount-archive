@@ -308,7 +308,8 @@ For some formats and encodings, **fuse-archive** relies on the following
 external programs being available in the sanitized `PATH`:
 
 *   `base64`: For `b64` and `base64` encodings.
-*   `brotli`: For `br` and `brotli` compression.
+*   `brotli`: For `br`, `brotli`, and `tbr` compression (if not supported
+    natively by **libarchive**).
 *   `compress`: For `z`, `taz`, and `tz` compression (if not supported natively
     by **libarchive**).
 *   `gpg`: For `asc`, `gpg`, and `pgp` encryption.

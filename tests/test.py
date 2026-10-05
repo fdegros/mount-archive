@@ -421,6 +421,7 @@ def HasLib(name):
 
 
 has_bz2lib = HasLib('bz2lib')
+has_libbrotli = HasLib('libbrotlidec')
 has_liblz4 = HasLib('liblz4')
 has_liblzma = HasLib('liblzma')
 has_libzstd = HasLib('libzstd')
@@ -657,7 +658,7 @@ def TestArchiveWithOptions(options=[]):
     if has_base64:
         zip_names += ['archive.tar.b64']
 
-    if has_brotli:
+    if has_libbrotli or has_brotli:
         zip_names += ['archive.tar.br', 'archive.tbr']
 
     if has_compress:
@@ -742,7 +743,7 @@ def TestArchiveWithOptions(options=[]):
     if has_base64:
         zip_names += ['romeo.txt.b64', 'romeo.txt.base64']
 
-    if has_brotli:
+    if has_libbrotli or has_brotli:
         zip_names += ['romeo.txt.br', 'romeo.txt.brotli']
 
     if has_compress:

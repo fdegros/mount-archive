@@ -43,7 +43,8 @@ certain formats and encodings:
 *   [Python 3](https://www.python.org) (required for the test runner)
 *   `umount` (required to unmount test file systems)
 *   `base64` (from `coreutils`)
-*   [`brotli`](https://github.com/google/brotli)
+*   [`brotli`](https://github.com/google/brotli) (if **libarchive** doesn't support
+    it natively)
 *   [`compress`](https://en.wikipedia.org/wiki/Compress_(software)) (from `ncompress`)
 *   [`gpg`](https://www.gnupg.org)
 *   [`lrzip`](https://github.com/ckolivas/lrzip)

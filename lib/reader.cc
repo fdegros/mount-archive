@@ -561,8 +561,13 @@ bool Reader::SetFilter(std::string_view const ext) {
           {"pgp", SET_FILTER_COMMAND(gpg)},
           {"b64", SET_FILTER_COMMAND(base64)},
           {"base64", SET_FILTER_COMMAND(base64)},
+#ifdef ARCHIVE_FILTER_BROTLI
+          {"br", SET_FILTER(BROTLI)},
+          {"brotli", SET_FILTER(BROTLI)},
+#else
           {"br", SET_FILTER_COMMAND(brotli)},
           {"brotli", SET_FILTER_COMMAND(brotli)},
+#endif
           {"bz", SET_FILTER(BZIP2)},
           {"bz2", SET_FILTER(BZIP2)},
           {"bzip2", SET_FILTER(BZIP2)},
@@ -622,7 +627,11 @@ bool Reader::SetCompressedTarFormat(std::string_view const ext) {
           {"taz", SET_FILTER(COMPRESS)},
           {"tz", SET_FILTER(COMPRESS)},
 #endif
+#ifdef ARCHIVE_FILTER_BROTLI
+          {"tbr", SET_FILTER(BROTLI)},
+#else
           {"tbr", SET_FILTER_COMMAND(brotli)},
+#endif
           {"tb2", SET_FILTER(BZIP2)},
           {"tbz", SET_FILTER(BZIP2)},
           {"tbz2", SET_FILTER(BZIP2)},
