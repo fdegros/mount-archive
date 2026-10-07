@@ -215,7 +215,7 @@ $ umount mnt
 *   **Wide format support**: Supports ZIP, 7Z, RAR, TAR, ISO, and many other
     formats through [**libarchive**](https://libarchive.org) and
     [**libzip**](https://libzip.org/).
-*   **Encryption**: Handles both native archive encryption (e.g., ZIP) and
+*   **Encryption**: Handles both native archive encryption (ZIP and 7Z) and
     [**GnuPG**](https://gnupg.org/) encryption.
 *   **Flexible Caching**: Offers pre-emptive, incremental (lazy), and memory-based
     caching strategies.
@@ -376,14 +376,13 @@ encryption and GPG-based encryption.
 
 ## Native Archive Encryption
 
-Some archive formats (such as ZIP) have native encryption capabilities built-in.
-**fuse-archive** can leverage these when supported by the underlying
+Some archive formats (such as ZIP and 7Z) have native encryption capabilities
+built-in. **fuse-archive** can leverage these when supported by the underlying
 **libarchive** and **libzip** libraries.
 
-*   **ZIP**: Supported (understand legacy ZIP encryption as well as AES-128,
-    AES-192 and AES-256).
-*   **7Z and RAR**: Native encryption for these formats is currently **not**
-    supported.
+*   **ZIP** and **7Z**: Supported (understand legacy ZIP encryption as well as
+    AES-128, AES-192 and AES-256).
+*   **RAR**: **Not** supported.
 
 When mounting a natively encrypted archive, **fuse-archive** will securely
 prompt for a password in the terminal:
@@ -571,7 +570,7 @@ Read-Write Support     |     ❌      |   ❌   |   ✅   |   ✅   |     ❌
 Format Support         |    Wide     |  ZIP   |  Wide  |  Wide  |    RAR
 GPG Encryption         |     ✅      |   ❌   |   ❌   |   ❌   |     ❌
 ZIP Encryption         |     ✅      |   ✅   |   ✅   |   ✅   |     ❌
-7Z Encryption          |     ❌      |   ❌   |   ❌   |   ✅   |     ❌
+7Z Encryption          |     ✅      |   ❌   |   ❌   |   ✅   |     ❌
 RAR Encryption         |     ❌      |   ❌   |   ❌   |   ❌   |     ✅
 Lazy Caching           |     ✅      |   ✅   |   ❌   |   ❌   |     ❌
 Lazy Extraction        |     ✅      |   ✅   |   ✅   |   ✅   |     ✅
