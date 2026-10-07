@@ -424,28 +424,30 @@ TEST_F(FUSETest, ReadDir) {
   std::memset(&fi, 0, sizeof(fi));
   ops_.opendir("/", &fi);
 
-  struct Data {
-    std::vector<std::string> names;
-  } data;
+  using Names = std::vector<std::string>;
+  Names names;
 
-  auto filler = [](void* buf, const char* name, const struct stat*, off_t
 #if FUSE_USE_VERSION >= 30
-                   , enum fuse_fill_dir_flags
-#endif
-  ) {
-    static_cast<Data*>(buf)->names.push_back(name);
+  auto filler = [](void* buf, const char* name, const struct stat*, off_t,
+                   enum fuse_fill_dir_flags) {
+    static_cast<Names*>(buf)->push_back(name);
     return 0;
   };
 
-#if FUSE_USE_VERSION >= 30
-  EXPECT_EQ(ops_.readdir("/", &data, filler, 0, &fi, (fuse_readdir_flags)0), 0);
+  EXPECT_EQ(ops_.readdir("/", &names, filler, 0, &fi, (fuse_readdir_flags)0),
+            0);
 #else
-  EXPECT_EQ(ops_.readdir("/", &data, filler, 0, &fi), 0);
+  auto filler = [](void* buf, const char* name, const struct stat*, off_t) {
+    static_cast<Names*>(buf)->push_back(name);
+    return 0;
+  };
+
+  EXPECT_EQ(ops_.readdir("/", &names, filler, 0, &fi), 0);
 #endif
 
-  EXPECT_FALSE(data.names.empty());
-  EXPECT_TRUE(std::find(data.names.begin(), data.names.end(), "romeo.txt") !=
-              data.names.end());
+  EXPECT_FALSE(names.empty());
+  EXPECT_TRUE(std::find(names.begin(), names.end(), "romeo.txt") !=
+              names.end());
 }
 
 // Checks that read() updates the access time of the file, unless O_NOATIME is
