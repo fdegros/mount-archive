@@ -609,8 +609,8 @@ def TestArchiveWithOptions(options=[]):
     }
 
     zip_names = [
-        'archive.rar', 'archive.cbr', 'archive.tar', 'archive.tar.uu',
-        'archive.xxx', '--help'
+        'archive.rar', 'archive.cbr', 'archive.tar', 'archive.cbt',
+        'archive.gtar', 'archive.tar.uu', 'archive.xxx', '--help'
     ]
 
     if has_zlib or has_gzip:
@@ -623,7 +623,11 @@ def TestArchiveWithOptions(options=[]):
         zip_names += [
             'archive.zip', 'archive.aab', 'archive.apk', 'archive.cbz',
             'archive.ear', 'archive.epub', 'archive.ipa', 'archive.jar',
-            'archive.war', 'archive.whl', 'archive.xpi', 'archive.sh'
+            'archive.war', 'archive.whl', 'archive.xpi', 'archive.sh',
+            'archive.3mf', 'archive.aar', 'archive.appx', 'archive.docm',
+            'archive.dotx', 'archive.egg', 'archive.kmz', 'archive.msix',
+            'archive.nupkg', 'archive.odb', 'archive.ott', 'archive.vsix',
+            'archive.xlsb', 'archive.xlsm', 'archive.xltx'
         ]
 
     if has_bz2lib or has_bzip2:
@@ -636,7 +640,7 @@ def TestArchiveWithOptions(options=[]):
         zip_names += ['archive.tar.lz4', 'archive.tlz4']
 
     if has_liblzma:
-        zip_names += ['archive.7z']
+        zip_names += ['archive.7z', 'archive.cb7']
 
     if has_liblzma or has_lzip:
         zip_names += ['archive.tar.lz', 'archive.tlzip', 'lz_is_lzip.tlz']
@@ -680,11 +684,16 @@ def TestArchiveWithOptions(options=[]):
 
     for zip_name in zip_names:
         MountArchiveAndCheckTree(zip_name, want_tree, options=options)
+        if zip_name not in ('archive.xxx', 'archive.sh', '--help'):
+            MountArchiveAndCheckTree(zip_name, want_tree, options=[*options, '-o', 'nobidding'])
 
     if has_zlib:
         MountArchiveAndCheckTree('archive.tar.gz.uu',
                                  want_tree,
                                  options=[*options, '-o', 'maxfilters=2'])
+        MountArchiveAndCheckTree('archive.tar.gz.uu',
+                                 want_tree,
+                                 options=[*options, '-o', 'maxfilters=2,nobidding'])
 
     want_tree = {
         '.': {'ino': 1, 'mode': 'drwxr-xr-x', 'nlink': 2},
@@ -761,6 +770,7 @@ def TestArchiveWithOptions(options=[]):
     for zip_name in zip_names:
         want_tree['romeo.txt']['mtime'] = os.stat(os.path.join(script_dir, 'data', zip_name)).st_mtime_ns
         MountArchiveAndCheckTree(zip_name, want_tree, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, options=[*options, '-o', 'nobidding'])
 
 
     want_tree = {
@@ -785,6 +795,7 @@ def TestArchiveWithOptions(options=[]):
 
     for zip_name in zip_names:
         MountArchiveAndCheckTree(zip_name, want_tree, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, options=[*options, '-o', 'nobidding'])
 
     if has_zlib:
         want_tree = {
@@ -809,6 +820,7 @@ def TestArchiveWithOptions(options=[]):
                                  options=[*options, '-o', 'nocache'],
                                  use_md5=False)
 
+    zip_name = 'test.csv.gz'
     if has_zlib:
         # This should not be mistaken for an mtree archive.
         # https://github.com/google/fuse-archive/issues/43
@@ -816,7 +828,8 @@ def TestArchiveWithOptions(options=[]):
             '.': {'ino': 1, 'mode': 'drwxr-xr-x', 'nlink': 2},
             'test.csv': {'mode': '-rw-r--r--', 'mtime': 1739773077000000000, 'size': 88, 'md5': '9359ea183fa52719372753e6ca34e3b1'},
         }
-        MountArchiveAndCheckTree('test.csv.gz', want_tree, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, options=[*options, '-o', 'nobidding'])
     elif has_gzip:
         # This should not be mistaken for an mtree archive.
         # https://github.com/google/fuse-archive/issues/43
@@ -824,7 +837,8 @@ def TestArchiveWithOptions(options=[]):
             '.': {'ino': 1, 'mode': 'drwxr-xr-x', 'nlink': 2},
             'test.csv': {'mode': '-rw-r--r--', 'size': 88, 'md5': '9359ea183fa52719372753e6ca34e3b1'},
         }
-        MountArchiveAndCheckTree('test.csv.gz', want_tree, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, options=[*options, '-o', 'nobidding'])
 
     want_tree = {
         '.': {'ino': 1, 'mode': 'drwxr-xr-x', 'nlink': 2},
@@ -845,6 +859,7 @@ def TestArchiveWithOptions(options=[]):
 
     for zip_name in zip_names:
         MountArchiveAndCheckTree(zip_name, want_tree, strict=False, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, strict=False, options=[*options, '-o', 'nobidding'])
 
     want_tree = {
         # Don't check mtime for this archive.
@@ -868,6 +883,7 @@ def TestArchiveWithOptions(options=[]):
 
     for zip_name in zip_names:
         MountArchiveAndCheckTree(zip_name, want_tree, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, options=[*options, '-o', 'nobidding'])
 
     want_trees = {
         # This should be handled as a RAR, and not as a ZIP.
@@ -1207,6 +1223,7 @@ def TestArchiveWithOptions(options=[]):
 
     for zip_name, want_tree in want_trees.items():
         MountArchiveAndCheckTree(zip_name, want_tree, options=options)
+        MountArchiveAndCheckTree(zip_name, want_tree, options=[*options, '-o', 'nobidding'])
 
 
 def TestSparse():

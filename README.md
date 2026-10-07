@@ -281,12 +281,15 @@ $ fuse-archive --version
 **fuse-archive** primarily determines an archive's format from its filename
 extension. It recognizes the following:
 
-*   **Archive formats**: `7z`, `7zip`, `a`, `ar`, `cab`, `cpio`, `deb`, `iso`,
-    `iso9660`, `jar`, `lha`, `lzh`, `mtree`, `rar`, `rpm`, `tar`, `war`, `warc`,
-    `xar`, `zip`, `zipx`.
-*   **ZIP-based formats**: `aab`, `apk`, `cbz`, `crx`, `docx`, `epub`, `ipa`,
-    `jar`, `odf`, `odg`, `odp`, `ods`, `odt`, `ppsx`, `pptx`, `war`, `whl`,
-    `xlsx`, `xpi`, `zip`, `zipx`.
+*   **Archive formats**: `7z`, `7zip`, `a`, `ar`, `cab`, `cb7`, `cbt`, `cpio`,
+    `deb`, `gtar`, `iso`, `iso9660`, `jar`, `lha`, `lzh`, `mtree`, `rar`, `rpm`,
+    `tar`, `udeb`, `war`, `warc`, `xar`, `zip`, `zipx`.
+*   **ZIP-based formats**: `3mf`, `aab`, `aar`, `apk`, `appx`, `cbz`, `crx`,
+    `docm`, `docx`, `dotm`, `dotx`, `ear`, `egg`, `epub`, `ipa`, `jar`, `kmz`,
+    `msix`, `nupkg`, `odb`, `odc`, `odf`, `odg`, `odi`, `odm`, `odp`, `ods`,
+    `odt`, `otc`, `otf`, `otg`, `oti`, `otp`, `ots`, `ott`, `potm`, `potx`,
+    `ppsm`, `ppsx`, `pptx`, `vsix`, `war`, `whl`, `xlsb`, `xlsm`, `xlsx`,
+    `xltm`, `xltx`, `xpi`, `zip`, `zipx`.
 *   **RAR-based formats**: `rar`, `cbr`.
 *   **Compressed TARs**: `tb2`, `tbr`, `tbz`, `tbz2`, `tz2`, `tgz`, `tlz`, `tlz4`,
     `tlzip`, `tlzma`, `tlrz`, `tlzo`, `tlzop`, `txz`, `tz`, `taz`, `tzs`, `tzst`,
