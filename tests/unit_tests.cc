@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <archive.h>
 #include <fcntl.h>
 #include <gtest/gtest.h>
 
@@ -197,6 +198,46 @@ TEST_F(ReaderTest, RollingBuffer) {
   EXPECT_EQ(r->Read(50, b3), 100);
   EXPECT_TRUE(std::equal(b1.begin() + 50, b1.end(), b3.begin()));
   EXPECT_TRUE(std::equal(b2.begin(), b2.begin() + 50, b3.begin() + 50));
+}
+
+// Tells if the version of libarchive in use has the 7zip:seekable-only option.
+static bool HasSeekableOnlyOption() {
+  struct archive* const a = archive_read_new();
+  archive_read_support_format_7zip(a);
+  const bool ok =
+      archive_read_set_options(a, "7zip:seekable-only") == ARCHIVE_OK;
+  archive_read_free(a);
+  return ok;
+}
+
+// A compressed 7Z archive with an unknown extension can't be read as a 7Z
+// archive, because the decompressed data can't be seeked. It is presented as
+// the decompressed file instead.
+TEST(Bidding, CompressedSevenZip) {
+  if (!HasSeekableOnlyOption()) {
+    GTEST_SKIP() << "libarchive doesn't have the 7zip:seekable-only option";
+  }
+
+  Tree tree;
+  Options options;
+  options.cache = Cache::None;
+  tree.SetOptions(options);
+  tree.Load(std::vector<std::string>{"tests/data/gzipped_7z.xxx"});
+
+  const Node* const node = tree.FindNode("/gzipped_7z");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->size, 300130);
+}
+
+// A 7Z archive that can be seeked is still read as a 7Z archive.
+TEST(Bidding, SevenZip) {
+  Tree tree;
+  Options options;
+  options.cache = Cache::None;
+  tree.SetOptions(options);
+  tree.Load(std::vector<std::string>{"tests/data/plain_7z.xxx"});
+
+  EXPECT_TRUE(tree.FindNode("/hello.txt") || tree.FindNode("/in/hello.txt"));
 }
 
 TEST_F(ReaderTest, SetFormat) {

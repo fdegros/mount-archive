@@ -896,6 +896,17 @@ void Reader::SetFormat() {
   // We use the "raw" archive format to read simple compressed files such as
   // "romeo.txt.gz".
   Check(archive_read_support_format_raw(archive.get()));
+
+  // Like ZIP archives, 7Z archives can only be read from an input that can
+  // seek. Don't let the 7Z format take over a compressed 7Z archive (such as
+  // "foo.7z.gz" renamed without its extensions): the "raw" format can at least
+  // provide the decompressed file. Versions of libarchive that don't have this
+  // option ignore it.
+  if (archive_read_set_options(archive.get(), "7zip:seekable-only") !=
+      ARCHIVE_OK) {
+    LOG(DEBUG) << "libarchive ignores the 7zip:seekable-only option";
+    archive_clear_error(archive.get());
+  }
 }
 
 ssize_t Reader::ReadRaw(Archive* const a,
