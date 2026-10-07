@@ -31,6 +31,7 @@ import unicodedata
 from contextlib import contextmanager
 
 sys.setrecursionlimit(3000)
+DEVNULL = subprocess.DEVNULL
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--fast', action='store_true', help='skip slow tests')
@@ -2627,7 +2628,7 @@ def TestMultiArchiveUsage():
         ]
         if args.verbose: command.append('-v')
 
-        proc = subprocess.Popen(command)
+        proc = subprocess.Popen(command, stderr=DEVNULL)
         try:
             for _ in range(20):
                 if os.path.ismount(mount_point): break
@@ -2658,7 +2659,7 @@ def TestMultiArchiveUsage():
         command = [mount_program, '-f', zip_link1, zip_link2]
         if args.verbose: command.append('-v')
 
-        proc = subprocess.Popen(command)
+        proc = subprocess.Popen(command, stderr=DEVNULL)
         try:
             for _ in range(20):
                 if os.path.ismount(zip_link2): break
@@ -2679,7 +2680,7 @@ def TestMultiArchiveUsage():
 def TestUsage():
     logging.info("Testing usage information")
     # No arguments
-    res = subprocess.run([mount_program], capture_output=True)
+    res = subprocess.run([mount_program], capture_output=True, encoding='UTF-8')
     if res.returncode != 1:
         LogError(
             f"Expected exit code 1 for no arguments, got {res.returncode}")
@@ -2719,7 +2720,7 @@ def TestAutoMountPoint():
         mount_point = os.path.join(tmp_dir, 'archive')
         command = [mount_program, '-f', '-v', zip_path]
 
-        proc = subprocess.Popen(command, cwd=tmp_dir)
+        proc = subprocess.Popen(command, cwd=tmp_dir, stderr=DEVNULL)
         try:
             for _ in range(20):
                 if os.path.ismount(mount_point): break
@@ -2737,7 +2738,7 @@ def TestAutoMountPoint():
         os.mkdir(os.path.join(tmp_dir, 'archive'))
         dedup_mount_point = os.path.join(tmp_dir, 'archive (1)')
 
-        proc = subprocess.Popen(command, cwd=tmp_dir)
+        proc = subprocess.Popen(command, cwd=tmp_dir, stderr=DEVNULL)
         try:
             for _ in range(20):
                 if os.path.ismount(dedup_mount_point): break
@@ -2759,7 +2760,7 @@ def TestAutoMountPoint():
         command_dash = [mount_program, '-f', dash_archive_path]
         if args.verbose: command_dash.append('-v')
 
-        proc = subprocess.Popen(command_dash, cwd=tmp_dir)
+        proc = subprocess.Popen(command_dash, cwd=tmp_dir, stderr=DEVNULL)
         try:
             mount_point_dash = os.path.join(tmp_dir, '--help')
             for _ in range(20):
