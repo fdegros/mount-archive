@@ -221,29 +221,21 @@ void Reader::AdvanceOffset(i64 const want) {
              << " in " << timer;
 }
 
-// https://github.com/libarchive/libarchive/issues/2500
-// https://github.com/libarchive/libarchive/issues/3496
-#define WORK_AROUND_ISSUE_3496 ARCHIVE_VERSION_NUMBER < 3'008'010
-
 i64 Reader::GetEntrySize() {
   if (archive_entry_size_is_set(entry)) {
     return archive_entry_size(entry);
   }
 
-#if WORK_AROUND_ISSUE_3496
+  // Always initialize the output parameters of archive_read_data_block().
+  // libarchive < 3.8.10 doesn't set them when it returns ARCHIVE_EOF.
+  // See https://github.com/libarchive/libarchive/issues/2500
+  // See https://github.com/libarchive/libarchive/issues/3496
   off_t offset = offset_within_entry;
-#endif
 
   // Consume the entry's data.
   while (true) {
-#if WORK_AROUND_ISSUE_3496
     const void* buff = nullptr;
     size_t len = 0;
-#else
-    const void* buff;
-    size_t len;
-    off_t offset;
-#endif
 
     switch (archive_read_data_block(archive.get(), &buff, &len, &offset)) {
       case ARCHIVE_RETRY:
@@ -423,15 +415,12 @@ i64 Reader::CacheEntryData(const FileDescriptor& dest_fd,
   }
 
   while (true) {
-#if WORK_AROUND_ISSUE_3496
+    // Always initialize the output parameters of archive_read_data_block().
+    // libarchive < 3.8.10 doesn't set them when it returns ARCHIVE_EOF.
+    // See https://github.com/libarchive/libarchive/issues/3496
     const void* buff = nullptr;
     size_t len = 0;
     off_t offset = dest_offset - file_start_offset;
-#else
-    const void* buff;
-    size_t len;
-    off_t offset;
-#endif
 
     switch (archive_read_data_block(a, &buff, &len, &offset)) {
       case ARCHIVE_RETRY:
