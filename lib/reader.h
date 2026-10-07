@@ -22,7 +22,6 @@
 #include <span>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 
 #include <boost/intrusive/list.hpp>
 
@@ -168,9 +167,21 @@ struct Reader : bi::list_base_hook<LinkMode> {
 
   using Ptr = std::unique_ptr<Reader, Recycler>;
 
+  // Tells if the given filename extension (in lower case and without the dot)
+  // signals a filter, such as `gz` in `foo.tar.gz`.
+  static bool IsFilterExtension(std::string_view ext) {
+    return ext_to_filter.contains(ext);
+  }
+
  private:
   friend class ReaderTest;
   friend class Tree;
+
+  // Maps filename extensions to the way of configuring libarchive for them.
+  using Map = std::unordered_map<std::string_view, void (*)(Reader&)>;
+
+  // The filters that are signaled by a filename extension.
+  static const Map ext_to_filter;
 
   // Read a password from the standard input if necessary.
   static const char* ReadPassword(Archive* a, void* client_data);

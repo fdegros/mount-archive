@@ -20,10 +20,10 @@
 #include <iostream>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <utility>
 
 #include "common.h"
+#include "reader.h"
 #include "util.h"
 
 namespace fuse_archive {
@@ -64,14 +64,8 @@ size_t Path::ExtensionPosition() const {
   assert(at(last_dot) == '.');
   const std::string ext = ToLower(substr(last_dot + 1));
 
-  // Is it a special extension?
-  static std::unordered_set<std::string_view> const special_exts = {
-      "asc",   "b64", "base64", "br",    "brotli", "bz",   "bz2",
-      "bzip2", "gpg", "grz",    "grzip", "gz",     "gzip", "lrz",
-      "lrzip", "lz",  "lzip",   "lz4",   "lzma",   "lzo",  "lzop",
-      "pgp",   "uu",  "xz",     "z",     "zst",    "zstd"};
-
-  if (special_exts.contains(ext)) {
+  // Is it a filter extension, such as `gz` in `foo.tar.gz`?
+  if (Reader::IsFilterExtension(ext)) {
     return Path(substr(0, last_dot)).FinalExtensionPosition();
   }
 
