@@ -2513,6 +2513,11 @@ def TestInvalidArchive():
             CheckArchiveMountingError("encrypted.7z", 22, password='password')
         CheckArchiveMountingError("encrypted-solidly.7z", 22, password='password')
 
+    # A .tlz file is a TAR compressed with lzma or lzip, not with another LZ-based
+    # compression that has its own extension.
+    CheckArchiveMountingError('lz4_is_not_tlz.tlz', 30)
+    CheckArchiveMountingError('lzo_is_not_tlz.tlz', 30)
+
     # Test nobidding option with an unrecognized extension
     CheckArchiveMountingError('archive.xxx', 30, options=['-o', 'nobidding'])
     CheckArchiveMountingError('--help', 30, options=['-o', 'nobidding'])
