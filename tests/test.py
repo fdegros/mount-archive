@@ -88,8 +88,8 @@ def GetLibArchiveVersion():
     return [0, 0, 0]
 
 
-lib_archive_version = GetLibArchiveVersion()
-logging.info(f'libarchive version: {lib_archive_version}')
+libarchive_version = GetLibArchiveVersion()
+logging.info(f'libarchive version: {libarchive_version}')
 
 on_mac = sys.platform.startswith('darwin')
 on_linux = sys.platform.startswith('linux')
@@ -399,13 +399,13 @@ has_tar = CanRun(['tar', '--version'])
 
 has_gpg = CanRun(['gpg', '--version'])
 if has_gpg:
-    if on_mac and lib_archive_version < [3, 9, 0]:
+    if on_mac and libarchive_version < [3, 9, 0]:
         # On macOS, even if the `gpg` program is present, libarchive can't use it
         # because of https://github.com/libarchive/libarchive/issues/3539
         has_gpg = False
         logging.info(f'Will skip tests relying on gpg')
 
-    if on_linux and lib_archive_version < [3, 8, 2]:
+    if on_linux and libarchive_version < [3, 8, 2]:
         # On Linux, even if the `gpg` program is present, libarchive < 3.8.2
         # can't use it because of
         # https://github.com/libarchive/libarchive/issues/3539
@@ -428,6 +428,7 @@ has_zlib = HasLib('zlib')
 has_nettle = HasLib('nettle')
 has_openssl = HasLib('openssl')
 has_rpm = HasLib('rpm')
+has_7z_encryption = libarchive_version >= [3, 9, 0]
 
 # https://github.com/google/fuse-archive/issues/59
 env = os.environ.copy()
@@ -2488,10 +2489,11 @@ def TestInvalidArchive():
     CheckArchiveMountingError('truncated.7z', 32)
     CheckArchiveMountingError('overflow.tar.gz', 32)
 
-    # 7Z encryption is not supported
-    if has_liblzma:
-        CheckArchiveMountingError("encrypted.7z", 22, password='password')
-    CheckArchiveMountingError("encrypted-solidly.7z", 22, password='password')
+    if not has_7z_encryption:
+        # 7Z encryption is not supported
+        if has_liblzma:
+            CheckArchiveMountingError("encrypted.7z", 22, password='password')
+        CheckArchiveMountingError("encrypted-solidly.7z", 22, password='password')
 
     # Test nobidding option with an unrecognized extension
     CheckArchiveMountingError('archive.xxx', 30, options=['-o', 'nobidding'])
