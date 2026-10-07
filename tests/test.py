@@ -652,7 +652,7 @@ def TestArchiveWithOptions(options=[]):
         ]
 
     if has_liblzma or has_xz:
-        zip_names += ['archive.tar.xz', 'archive.txz', 'compressed.tar']
+        zip_names += ['archive.tar.xz', 'archive.txz']
 
     if has_libzstd or has_zstd:
         zip_names += [
@@ -2512,6 +2512,9 @@ def TestInvalidArchive():
         if has_liblzma:
             CheckArchiveMountingError("encrypted.7z", 22, password='password')
         CheckArchiveMountingError("encrypted-solidly.7z", 22, password='password')
+
+    # A plain .tar file should be an uncompressed TAR.
+    CheckArchiveMountingError('compressed.tar', 30)
 
     # A .tlz file is a TAR compressed with lzma or lzip, not with another LZ-based
     # compression that has its own extension.

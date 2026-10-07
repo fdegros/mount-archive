@@ -661,15 +661,6 @@ bool Reader::SetCompressedTarFormat(std::string_view const ext) {
           {"tzs", SET_FILTER(ZSTD)},
           {"tzst", SET_FILTER(ZSTD)},
           {"tzstd", SET_FILTER(ZSTD)},
-          {"tar",
-           [](Reader& r) {
-             // Some `.tar` archives are actually compressed TARs, even though
-             // they don't have the compression extension. So, as a special
-             // case for `.tar`, automatically recognize the possible
-             // compression filters.
-             Archive* const a = r.archive.get();
-             r.Check(archive_read_support_filter_all(a));
-           }},
       };
 
   const auto it = ext_to_filter.find(ext);
