@@ -533,14 +533,30 @@ void Reader::SetRpmFormat() {
     r.Check(archive_read_append_filter(a, ARCHIVE_FILTER_##s)); \
   }
 
-#define SET_FILTER_COMMAND(s)                                 \
+#define SET_FILTER_COMMAND(p)                                 \
   [](Reader& r) {                                             \
     Archive* const a = r.archive.get();                       \
-    r.Check(archive_read_append_filter_program(a, #s " -d")); \
+    r.Check(archive_read_append_filter_program(a, #p " -d")); \
   }
 
-#define WORK_AROUND_ISSUE_2513 ARCHIVE_VERSION_NUMBER < 3'008'007
-#define WORK_AROUND_ISSUE_2514 ARCHIVE_VERSION_NUMBER < 3'008'008
+// Appends the native filter, or runs the given program instead if the
+// libarchive library actually in use (as opposed to the one that fuse-archive
+// was compiled against) is older than `fixed_in` and has a bug in this filter.
+#define SET_FILTER_SINCE(s, p, fixed_in)                              \
+  [](Reader& r) {                                                     \
+    Archive* const a = r.archive.get();                               \
+    r.Check(archive_version_number() < (fixed_in)                     \
+                ? archive_read_append_filter_program(a, #p " -d")     \
+                : archive_read_append_filter(a, ARCHIVE_FILTER_##s)); \
+  }
+
+// https://github.com/libarchive/libarchive/issues/2513
+// archive_read_append_filter() fails for the lzop and grzip filters.
+constexpr int kFixedIssue2513 = 3'008'007;
+
+// https://github.com/libarchive/libarchive/issues/2514
+// archive_read_append_filter() crashes for the compress filter.
+constexpr int kFixedIssue2514 = 3'008'008;
 
 bool Reader::SetFilter(std::string_view const ext) {
   static std::unordered_map<std::string_view, void (*)(Reader&)> const
@@ -560,14 +576,8 @@ bool Reader::SetFilter(std::string_view const ext) {
           {"bz", SET_FILTER(BZIP2)},
           {"bz2", SET_FILTER(BZIP2)},
           {"bzip2", SET_FILTER(BZIP2)},
-#if WORK_AROUND_ISSUE_2513
-          // Work around https://github.com/libarchive/libarchive/issues/2513
-          {"grz", SET_FILTER_COMMAND(grzip)},
-          {"grzip", SET_FILTER_COMMAND(grzip)},
-#else
-          {"grz", SET_FILTER(GRZIP)},
-          {"grzip", SET_FILTER(GRZIP)},
-#endif
+          {"grz", SET_FILTER_SINCE(GRZIP, grzip, kFixedIssue2513)},
+          {"grzip", SET_FILTER_SINCE(GRZIP, grzip, kFixedIssue2513)},
           {"gz", SET_FILTER(GZIP)},
           {"gzip", SET_FILTER(GZIP)},
           {"lrz", SET_FILTER(LRZIP)},
@@ -576,22 +586,11 @@ bool Reader::SetFilter(std::string_view const ext) {
           {"lzip", SET_FILTER(LZIP)},
           {"lz4", SET_FILTER(LZ4)},
           {"lzma", SET_FILTER(LZMA)},
-#if WORK_AROUND_ISSUE_2513
-          // Work around https://github.com/libarchive/libarchive/issues/2513
-          {"lzo", SET_FILTER_COMMAND(lzop)},
-          {"lzop", SET_FILTER_COMMAND(lzop)},
-#else
-          {"lzo", SET_FILTER(LZOP)},
-          {"lzop", SET_FILTER(LZOP)},
-#endif
+          {"lzo", SET_FILTER_SINCE(LZOP, lzop, kFixedIssue2513)},
+          {"lzop", SET_FILTER_SINCE(LZOP, lzop, kFixedIssue2513)},
           {"uu", SET_FILTER(UU)},
           {"xz", SET_FILTER(XZ)},
-#if WORK_AROUND_ISSUE_2514
-          // Work around https://github.com/libarchive/libarchive/issues/2514
-          {"z", SET_FILTER_COMMAND(compress)},
-#else
-          {"z", SET_FILTER(COMPRESS)},
-#endif
+          {"z", SET_FILTER_SINCE(COMPRESS, compress, kFixedIssue2514)},
           {"zst", SET_FILTER(ZSTD)},
           {"zstd", SET_FILTER(ZSTD)},
       };
@@ -608,14 +607,8 @@ bool Reader::SetFilter(std::string_view const ext) {
 bool Reader::SetCompressedTarFormat(std::string_view const ext) {
   static std::unordered_map<std::string_view, void (*)(Reader&)> const
       ext_to_filter = {
-#if WORK_AROUND_ISSUE_2514
-          // Work around https://github.com/libarchive/libarchive/issues/2514
-          {"taz", SET_FILTER_COMMAND(compress)},
-          {"tz", SET_FILTER_COMMAND(compress)},
-#else
-          {"taz", SET_FILTER(COMPRESS)},
-          {"tz", SET_FILTER(COMPRESS)},
-#endif
+          {"taz", SET_FILTER_SINCE(COMPRESS, compress, kFixedIssue2514)},
+          {"tz", SET_FILTER_SINCE(COMPRESS, compress, kFixedIssue2514)},
 #ifdef ARCHIVE_FILTER_BROTLI
           {"tbr", SET_FILTER(BROTLI)},
 #else
@@ -638,13 +631,8 @@ bool Reader::SetCompressedTarFormat(std::string_view const ext) {
           {"tlzip", SET_FILTER(LZIP)},
           {"tlzma", SET_FILTER(LZMA)},
           {"tlrz", SET_FILTER(LRZIP)},
-#if WORK_AROUND_ISSUE_2513
-          {"tlzo", SET_FILTER_COMMAND(lzop)},
-          {"tlzop", SET_FILTER_COMMAND(lzop)},
-#else
-          {"tlzo", SET_FILTER(LZOP)},
-          {"tlzop", SET_FILTER(LZOP)},
-#endif
+          {"tlzo", SET_FILTER_SINCE(LZOP, lzop, kFixedIssue2513)},
+          {"tlzop", SET_FILTER_SINCE(LZOP, lzop, kFixedIssue2513)},
           {"txz", SET_FILTER(XZ)},
           {"tz2", SET_FILTER(BZIP2)},
           {"tzs", SET_FILTER(ZSTD)},
