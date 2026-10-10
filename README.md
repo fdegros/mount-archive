@@ -109,8 +109,8 @@ real archives, and verified to build on macOS.
     are read.
 
 **-o nobidding**
-:   Do not use libarchive's format bidding system to detect the archive format.
-    Instead, strictly rely on the file extension.
+:   Do not use **libarchive**'s format bidding system to detect the archive
+    format. Instead, strictly rely on the file extension.
 
 **-o noexternal**
 :   Do not use external programs for decompression. By default, external programs
@@ -120,6 +120,9 @@ real archives, and verified to build on macOS.
     programs by setting `PATH` to a safe, non-directory value (`/dev/null`),
     ensuring that only decompression filters implemented natively or statically
     linked into **libarchive** are used.
+
+**-o nolibzip**
+:   Do not use **libzip** for ZIP archives. Only use **libarchive**.
 
 **-o unsafe_path**
 :   Do not sanitize `PATH` for external programs. This option preserves the
@@ -210,8 +213,9 @@ $ umount mnt
 
 *   **Read-only view**: Archives are served as a safe, read-only file system.
 *   **Wide format support**: Supports ZIP, 7Z, RAR, TAR, ISO, and many other
-    formats through [**libarchive**](https://libarchive.org).
-*   **Encryption**: Handles both native archive encryption (e.g., ZIP) and
+    formats through [**libarchive**](https://libarchive.org) and
+    [**libzip**](https://libzip.org/).
+*   **Encryption**: Handles both native archive encryption (ZIP and 7Z) and
     [**GnuPG**](https://gnupg.org/) encryption.
 *   **Flexible Caching**: Offers pre-emptive, incremental (lazy), and memory-based
     caching strategies.
@@ -260,17 +264,19 @@ will be the one getting renamed.
 # ARCHIVE FORMATS
 
 **fuse-archive** is built on top of the [**libarchive**](https://libarchive.org)
-library. It supports a wide variety of archive formats and compression methods,
-either natively through **libarchive** or by invoking external filter programs.
+and [**libzip**](https://libzip.org) libraries. It supports a wide variety of
+archive formats and compression methods, either natively through **libarchive**,
+**libzip** or by invoking external filter programs.
 
 The exact set of supported formats depends on:
 
 *   The version and build-time configuration of the **libarchive** library.
+*   The version and build-time configuration of the **libzip** library.
 *   The availability of external filter programs in the sanitized `PATH`
     (see the `-o noexternal` and `-o unsafe_path` options).
 
-To see the version of **libarchive** and other libraries linked with your build
-of **fuse-archive**, use the `--version` option:
+To see the version of **libarchive**, **libzip** and other libraries linked with
+your build of **fuse-archive**, use the `--version` option:
 
 ```
 $ fuse-archive --version
@@ -370,14 +376,13 @@ encryption and GPG-based encryption.
 
 ## Native Archive Encryption
 
-Some archive formats (such as ZIP) have native encryption capabilities built-in.
-**fuse-archive** can leverage these when supported by the underlying
-**libarchive** library.
+Some archive formats (such as ZIP and 7Z) have native encryption capabilities
+built-in. **fuse-archive** can leverage these when supported by the underlying
+**libarchive** and **libzip** libraries.
 
-*   **ZIP**: Supported (understand legacy ZIP encryption as well as AES-128,
-    AES-192 and AES-256).
-*   **7Z and RAR**: Native encryption for these formats is currently **not**
-    supported.
+*   **ZIP** and **7Z**: Supported (understand legacy ZIP encryption as well as
+    AES-128, AES-192 and AES-256).
+*   **RAR**: **Not** supported.
 
 When mounting a natively encrypted archive, **fuse-archive** will securely
 prompt for a password in the terminal:
@@ -565,7 +570,7 @@ Read-Write Support     |     ❌      |   ❌   |   ✅   |   ✅   |     ❌
 Format Support         |    Wide     |  ZIP   |  Wide  |  Wide  |    RAR
 GPG Encryption         |     ✅      |   ❌   |   ❌   |   ❌   |     ❌
 ZIP Encryption         |     ✅      |   ✅   |   ✅   |   ✅   |     ❌
-7Z Encryption          |     ❌      |   ❌   |   ❌   |   ✅   |     ❌
+7Z Encryption          |     ✅      |   ❌   |   ❌   |   ✅   |     ❌
 RAR Encryption         |     ❌      |   ❌   |   ❌   |   ❌   |     ✅
 Lazy Caching           |     ✅      |   ✅   |   ❌   |   ❌   |     ❌
 Lazy Extraction        |     ✅      |   ✅   |   ✅   |   ✅   |     ✅

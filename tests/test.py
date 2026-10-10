@@ -17,11 +17,13 @@
 import argparse
 import ctypes
 import errno
+import gzip
 import hashlib
 import logging
 import os
 import pprint
 import random
+import shutil
 import stat
 import subprocess
 import sys
@@ -72,9 +74,9 @@ fuse_version = GetFuseVersion()
 logging.info(f'FUSE version: {fuse_version}')
 
 
-def GetLibArchiveVersion():
+def GetLibVersion(name):
     for line in sr.stdout.split('\n'):
-        if line.startswith('libarchive '):
+        if line.startswith(name):
             version_str = line.split()[1]
             version = []
             for part in version_str.split('.'):
@@ -89,8 +91,11 @@ def GetLibArchiveVersion():
     return [0, 0, 0]
 
 
-libarchive_version = GetLibArchiveVersion()
+libarchive_version = GetLibVersion('libarchive')
 logging.info(f'libarchive version: {libarchive_version}')
+
+libzip_version = GetLibVersion('libzip')
+logging.info(f'libzip version: {libzip_version}')
 
 on_mac = sys.platform.startswith('darwin')
 on_linux = sys.platform.startswith('linux')
@@ -1654,6 +1659,71 @@ def TestMultiArchive(options=[]):
     MountArchiveAndCheckTree([zip1, zip1], want_tree, options=options)
 
 
+# Tests how the timestamps of files and directories are derived.
+def TestTimestamps():
+    # archive.zip only records an atime (in an extended timestamp field) for
+    # some entries. The ctime and the birth time are missing, or set to zero by
+    # libarchive, and should fall back to the entry's own mtime rather than
+    # showing up as the Unix epoch.
+    s = 1_000_000_000
+    want_tree = {
+        'github-tags.json': {
+            'atime': 1620042264 * s,
+            'mtime': 1597241062 * s,
+            'ctime': 1597241062 * s,
+            'btime': 1597241062 * s,
+        },
+        'hello.sh': {
+            'atime': 1620042264 * s,
+            'mtime': 1620022795 * s,
+            'ctime': 1620022795 * s,
+            'btime': 1620022795 * s,
+        },
+        'romeo.txt': {
+            'atime': 1620042264 * s,
+            'mtime': 1580883024 * s,
+            'ctime': 1580883024 * s,
+            'btime': 1580883024 * s,
+        },
+    }
+    MountArchiveAndCheckTree('archive.zip',
+                             want_tree,
+                             strict=False,
+                             use_md5=False)
+
+    # A ZIP file compressed with another filter is cached in full before being
+    # mounted. With nomerge, the directory created for this archive should get
+    # the timestamps of the archive file, even though the archive has been
+    # replaced by the cache file at this point.
+    if not has_gzip and not has_zlib: return
+
+    mtime = 1_600_000_000
+    with tempfile.TemporaryDirectory(dir=tmp_dir_base) as dir:
+        zip_name = os.path.join(dir, 'archive.zip.gz')
+        with open(os.path.join(script_dir, 'data', 'archive.zip'), 'rb') as src:
+            with gzip.open(zip_name, 'wb') as dst:
+                shutil.copyfileobj(src, dst)
+        os.utime(zip_name, (mtime, mtime))
+
+        want_tree = {
+            'archive.zip': {
+                'mode': 'drwxr-xr-x',
+                'atime': mtime * s,
+                'mtime': mtime * s,
+                'ctime': mtime * s,
+                'btime': mtime * s,
+            },
+            'archive.zip/hello.sh': {
+                'mtime': 1620022795 * s,
+            },
+        }
+        MountArchiveAndCheckTree(zip_name,
+                                 want_tree,
+                                 options=['-o', 'nomerge'],
+                                 strict=False,
+                                 use_md5=False)
+
+
 # Tests SUID, SGID and sticky bits with -o enforce_permissions.
 def TestSpecialPermissions(options=[]):
     if not has_gzip and not has_zlib: return
@@ -2323,6 +2393,7 @@ def TestEncryptedArchive(options=[]):
             'md5': '7a542815e2c51837b3d8a8b2ebf36490',
         },
     }
+
     for password in ['wrong password', '\n', '']:
         MountArchiveAndCheckTree(
             zip_name,
@@ -2330,6 +2401,31 @@ def TestEncryptedArchive(options=[]):
             want_inodes=6,
             options=options + ['-o', 'force'],
             password=password,
+        )
+
+    # 7z encryption
+    if not has_7z_encryption or not has_liblzma: return
+
+    want_tree = {
+        '.': {'mode': 'drwxr-xr-x', 'nlink': 4},
+        'artificial': {'mode': 'drwxr-xr-x'},
+        'artificial/0.bytes': {'mode': '-rw-r--r--', 'mtime': 1580883024000000000, 'size': 0, 'md5': 'd41d8cd98f00b204e9800998ecf8427e'},
+        'github-tags.json': {'mode': '-rw-r--r--', 'mtime': 1597241062000000000, 'size': 853, 'md5': 'b2d7993ed99c65296bf95824c57b4fdc'},
+        'hello.sh': {'mode': '-rwxr-xr-x', 'mtime': 1620022795000000000, 'size': 693, 'md5': '72d710dd3766a67401a79f8d3df3114c'},
+        'non-ascii': {'mode': 'drwxr-xr-x'},
+        'non-ascii/αβ.txt': {'mode': '-rw-r--r--', 'mtime': 1620022605000000000, 'size': 104, 'md5': '3369a4163a436de59e23daedd371b5f0'},
+        'non-ascii/😻.txt': {'mode': '-rw-r--r--', 'mtime': 1620022983000000000, 'size': 151, 'md5': '5d18e0e461374191825c6e7898af5634'},
+        'pjw-thumbnail.png': {'mode': '-rw-r--r--', 'mtime': 1580883024000000000, 'size': 208, 'md5': 'f7017e60a0af6d7ad3128c149624aac5'},
+        'romeo.txt': {'mode': '-rw-r--r--', 'mtime': 1580883024000000000, 'size': 942, 'md5': '80f1521c4533d017df063c623b75cde3'},
+        'romeo.txt.gz': {'mode': '-rw-r--r--', 'mtime': 1580883024000000000, 'size': 558, 'md5': 'f261bc929b34f58d8138413ed6252f2d'},
+    }
+
+    for zip_name in ['encrypted.7z', 'encrypted-solidly.7z']:
+        MountArchiveAndCheckTree(
+            zip_name,
+            want_tree,
+            options=options,
+            password='password',
         )
 
 
@@ -3050,6 +3146,8 @@ TestMultiArchive()
 TestMultiArchive(['-o', 'nocache'])
 TestMultiArchive(['-o', 'lazycache'])
 if has_memcache: TestMultiArchive(['-o', 'memcache'])
+
+TestTimestamps()
 
 TestSpecialPermissions()
 TestSpecialPermissions(['-o', 'nocache'])

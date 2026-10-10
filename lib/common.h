@@ -19,7 +19,12 @@
 #include <archive_entry.h>
 #include <sys/types.h>
 
+#ifdef LIBZIP
+#include <zip.h>
+#endif
+
 #include <ctime>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -29,6 +34,17 @@
 #include "util.h"
 
 namespace fuse_archive {
+
+// Guard that executes the given function upon destruction.
+struct Cleanup {
+  std::function<void()> fn;
+
+  ~Cleanup() {
+    if (fn) {
+      fn();
+    }
+  }
+};
 
 // Possible caching strategies.
 enum class Cache {
@@ -53,6 +69,7 @@ struct Options {
   int xattrs = 1;
   int atime = 1;
   int bidding = 1;
+  int libzip = 1;
   int enforce_permissions = 0;
 
 #if FUSE_USE_VERSION >= 30
@@ -76,6 +93,27 @@ enum class ArchiveFormat : int {
 // Formats an ArchiveFormat for logging output.
 std::ostream& operator<<(std::ostream& out, ArchiveFormat f);
 
+#ifdef LIBZIP
+enum class ZipError : int;
+std::ostream& operator<<(std::ostream& out, ZipError e);
+
+using ZipArchive = zip_t;
+using ZipFile = zip_file_t;
+
+struct ZipDeleter {
+  void operator()(ZipArchive* const z) const { zip_discard(z); }
+
+  void operator()(ZipFile* const f) const {
+    if (int const e = zip_fclose(f)) {
+      LOG(WARNING) << "Error while closing ZipFile: " << ZipError(e);
+    }
+  }
+};
+
+using ZipArchivePtr = std::unique_ptr<ZipArchive, ZipDeleter>;
+using ZipFilePtr = std::unique_ptr<ZipFile, ZipDeleter>;
+#endif
+
 // An open archive file descriptor with other archive metadata.
 struct ArchiveDescriptor {
   // Command line argument naming the archive file.
@@ -93,6 +131,11 @@ struct ArchiveDescriptor {
   // Modification time of this archive file. Used as a fallback for archive
   // entries that don't carry their own modification time.
   Time mtime = no_time;
+
+#ifdef LIBZIP
+  // libzip handle if this archive is managed by libzip instead of libarchive.
+  ZipArchivePtr zip_archive;
+#endif
 
   // Format of this archive.
   ArchiveFormat format = ArchiveFormat::NONE;

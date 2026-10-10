@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <algorithm>
 #include <climits>
+#include <unordered_set>
 #include <vector>
 
 #include <boost/functional/hash.hpp>
@@ -135,6 +136,48 @@ void SetTimestamps(Node* const node,
                            .tv_nsec = archive_entry_birthtime_nsec(entry)}
                     : node->mtime;
 }
+
+#ifdef LIBZIP
+bool OpenWithLibzip(ArchiveDescriptor* const archive) {
+  assert(archive);
+  Path const path(archive->path);
+
+  // Get the final filename extension in lower case and without the dot.
+  size_t const i = path.FinalExtensionPosition();
+  if (i >= path.size()) {
+    return false;
+  }
+
+  // Check if the extension indicates a ZIP.
+  static std::unordered_set<std::string_view> const zip_exts = {
+      "aab",  "apk", "cbz", "crx",  "docx", "epub", "ipa",
+      "jar",  "odf", "odg", "odp",  "ods",  "odt",  "ppsx",
+      "pptx", "war", "whl", "xlsx", "xpi",  "zip",  "zipx"};
+  if (!zip_exts.contains(ToLower(path.substr(i + 1)))) {
+    return false;
+  }
+
+  // Try to open the archive with libzip.
+  Timer const timer;
+  FileDescriptor fd(dup(archive->fd));
+  if (!fd.IsValid()) {
+    PLOG(ERROR) << "Cannot dup file descriptor of " << path;
+    return false;
+  }
+
+  int error = 0;
+  ZipArchivePtr zip_archive(zip_fdopen(fd, ZIP_RDONLY, &error));
+  if (!zip_archive) {
+    LOG(INFO) << "Cannot open " << path << " with libzip: " << ZipError(error);
+    return false;
+  }
+
+  fd.Release();
+  LOG(INFO) << "Opened " << path << " with libzip in " << timer;
+  archive->zip_archive = std::move(zip_archive);
+  return true;
+}
+#endif
 
 }  // namespace
 
@@ -760,6 +803,13 @@ void Tree::Load(std::span<const std::string> const archives) {
 
     try {
       Timer const timer;
+
+#ifdef LIBZIP
+      if (options_.libzip) {
+        OpenWithLibzip(&archive);
+      }
+#endif
+
       std::unique_ptr<Reader> r = std::make_unique<Reader>(&archive, *this);
       r->should_print_progress = LOG_IS_ON(INFO) && archive.size > 0;
 
@@ -788,6 +838,12 @@ void Tree::Load(std::span<const std::string> const archives) {
             .filter_count = archive.filter_count,
             .is_seekable_format = false,
         };
+
+#ifdef LIBZIP
+        if (options_.libzip) {
+          OpenWithLibzip(&archive);
+        }
+#endif
         r = std::make_unique<Reader>(&archive, *this);
         r->should_print_progress = LOG_IS_ON(INFO) && archive.size > 0;
       }

@@ -49,10 +49,10 @@ using LinkMode = bi::link_mode<bi::safe_link>;
 // positioned independently.
 struct Reader : bi::list_base_hook<LinkMode> {
   // Global count of Reader instances created.
-  static int count;
+  static i64 count;
 
   // Unique identifier for this Reader instance.
-  int const id = ++count;
+  i64 const id = ++count;
 
   // The descriptor of the archive this reader is operating on.
   ArchiveDescriptor* const descriptor;
