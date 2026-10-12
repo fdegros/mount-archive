@@ -25,6 +25,7 @@ import random
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import unicodedata
@@ -1381,9 +1382,9 @@ def TestHardlinks(options=[]):
         'File3': {'ino': 2, 'mode': '-rw-r--r--', 'nlink': 7, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
         'File4': {'ino': 2, 'mode': '-rw-r--r--', 'nlink': 7, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
         'File5': {'ino': 2, 'mode': '-rw-r--r--', 'nlink': 7, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
-        'Symlink1': {'ino': 5, 'mode': 'lrwxr-xr-x', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
-        'Symlink2': {'ino': 5, 'mode': 'lrwxr-xr-x', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
-        'Symlink3': {'ino': 5, 'mode': 'lrwxr-xr-x', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'Symlink1': {'ino': 5, 'mode': 'lrwxrwxrwx', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'Symlink2': {'ino': 5, 'mode': 'lrwxrwxrwx', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'Symlink3': {'ino': 5, 'mode': 'lrwxrwxrwx', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
     }
 
     MountArchiveAndCheckTree([zip_name, zip_name, zip_name],
@@ -1405,9 +1406,9 @@ def TestHardlinks(options=[]):
         'hardlinks/File3': {'ino': 3, 'mode': '-rw-r--r--', 'nlink': 7, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
         'hardlinks/File4': {'ino': 3, 'mode': '-rw-r--r--', 'nlink': 7, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
         'hardlinks/File5': {'ino': 3, 'mode': '-rw-r--r--', 'nlink': 7, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
-        'hardlinks/Symlink1': {'ino': 6, 'mode': 'lrwxr-xr-x', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
-        'hardlinks/Symlink2': {'ino': 6, 'mode': 'lrwxr-xr-x', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
-        'hardlinks/Symlink3': {'ino': 6, 'mode': 'lrwxr-xr-x', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'hardlinks/Symlink1': {'ino': 6, 'mode': 'lrwxrwxrwx', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'hardlinks/Symlink2': {'ino': 6, 'mode': 'lrwxrwxrwx', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'hardlinks/Symlink3': {'ino': 6, 'mode': 'lrwxrwxrwx', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
         'hardlinks (1)': {'ino': 7, 'mode': 'drwxr-xr-x', 'nlink': 3, 'mtime': 1727754916000000000},
         'hardlinks (1)/Dir1': {'ino': 9, 'mode': 'drwxr-xr-x', 'nlink': 3, 'mtime': 1727754809000000000},
         'hardlinks (1)/Dir1/Dir2': {'ino': 10, 'mode': 'drwxr-xr-x', 'nlink': 2, 'mtime': 1727754818000000000},
@@ -1418,9 +1419,9 @@ def TestHardlinks(options=[]):
         'hardlinks (1)/File3': {'ino': 8, 'mode': '-rw-r--r--', 'nlink': 7, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
         'hardlinks (1)/File4': {'ino': 8, 'mode': '-rw-r--r--', 'nlink': 7, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
         'hardlinks (1)/File5': {'ino': 8, 'mode': '-rw-r--r--', 'nlink': 7, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
-        'hardlinks (1)/Symlink1': {'ino': 11, 'mode': 'lrwxr-xr-x', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
-        'hardlinks (1)/Symlink2': {'ino': 11, 'mode': 'lrwxr-xr-x', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
-        'hardlinks (1)/Symlink3': {'ino': 11, 'mode': 'lrwxr-xr-x', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'hardlinks (1)/Symlink1': {'ino': 11, 'mode': 'lrwxrwxrwx', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'hardlinks (1)/Symlink2': {'ino': 11, 'mode': 'lrwxrwxrwx', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'hardlinks (1)/Symlink3': {'ino': 11, 'mode': 'lrwxrwxrwx', 'nlink': 3, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
     }
 
     MountArchiveAndCheckTree([zip_name, zip_name],
@@ -1434,7 +1435,7 @@ def TestHardlinks(options=[]):
         'Dir1': {'ino': 3, 'mode': 'drwxr-xr-x', 'nlink': 3, 'mtime': 1727754809000000000},
         'Dir1/Dir2': {'ino': 4, 'mode': 'drwxr-xr-x', 'nlink': 2, 'mtime': 1727754818000000000},
         'File4': {'ino': 2, 'mode': '-rw-r--r--', 'nlink': 1, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
-        'Symlink2': {'ino': 5, 'mode': 'lrwxr-xr-x', 'nlink': 1, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'Symlink2': {'ino': 5, 'mode': 'lrwxrwxrwx', 'nlink': 1, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
     }
 
     MountArchiveAndCheckTree(zip_name,
@@ -1446,7 +1447,7 @@ def TestHardlinks(options=[]):
     want_tree = {
         '.': {'ino': 1, 'mode': 'drwxr-xr-x', 'nlink': 2},
         'File4': {'ino': 2, 'mode': '-rw-r--r--', 'nlink': 1, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
-        'Symlink2': {'ino': 3, 'mode': 'lrwxr-xr-x', 'nlink': 1, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'Symlink2': {'ino': 3, 'mode': 'lrwxrwxrwx', 'nlink': 1, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
     }
 
     MountArchiveAndCheckTree(zip_name,
@@ -1459,10 +1460,10 @@ def TestHardlinks(options=[]):
         '.': {'ino': 1, 'mode': 'drwxr-xr-x', 'nlink': 4},
         'hardlinks': {'ino': 2, 'mode': 'drwxr-xr-x', 'nlink': 2},
         'hardlinks/File4': {'ino': 3, 'mode': '-rw-r--r--', 'nlink': 1, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
-        'hardlinks/Symlink2': {'ino': 4, 'mode': 'lrwxr-xr-x', 'nlink': 1, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'hardlinks/Symlink2': {'ino': 4, 'mode': 'lrwxrwxrwx', 'nlink': 1, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
         'hardlinks (1)': {'ino': 5, 'mode': 'drwxr-xr-x', 'nlink': 2},
         'hardlinks (1)/File4': {'ino': 6, 'mode': '-rw-r--r--', 'nlink': 1, 'mtime': 1727754740000000000, 'size': 35, 'blocks': 1, 'xattr': {}, 'md5': '972fc6414a197a62c6c84fe8da0cf5ca'},
-        'hardlinks (1)/Symlink2': {'ino': 7, 'mode': 'lrwxr-xr-x', 'nlink': 1, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
+        'hardlinks (1)/Symlink2': {'ino': 7, 'mode': 'lrwxrwxrwx', 'nlink': 1, 'mtime': 1727754873000000000, 'target': 'Target', 'xattr': {}},
     }
 
     MountArchiveAndCheckTree([zip_name, zip_name],
@@ -2333,6 +2334,51 @@ def TestEncryptedArchive(options=[]):
         )
 
 
+# Tests the permissions of symlinks. The fmask never applies to them. They are
+# 0777, unless -o enforce_permissions asks for the bits from the archive.
+def TestSymlinkPermissions():
+    with tempfile.TemporaryDirectory(dir=tmp_dir_base) as dir:
+        tar_name = os.path.join(dir, 'symlinks.tar')
+        with tarfile.open(tar_name, 'w') as tar:
+            info = tarfile.TarInfo('regular')
+            info.mode = 0o644
+            tar.addfile(info)
+            for name, mode in (('link755', 0o755), ('link700', 0o700),
+                               ('link777', 0o777)):
+                info = tarfile.TarInfo(name)
+                info.type = tarfile.SYMTYPE
+                info.linkname = 'regular'
+                info.mode = mode
+                tar.addfile(info)
+
+        def Check(options, regular, link755, link700, link777):
+            want_tree = {
+                '.': {'mode': 'drwxr-xr-x'},
+                'regular': {'mode': regular},
+                'link755': {'mode': link755, 'target': 'regular'},
+                'link700': {'mode': link700, 'target': 'regular'},
+                'link777': {'mode': link777, 'target': 'regular'},
+            }
+            MountArchiveAndCheckTree(tar_name,
+                                     want_tree,
+                                     options=options,
+                                     use_md5=False)
+
+        rwx = 'lrwxrwxrwx'
+        Check([], '-rw-r--r--', rwx, rwx, rwx)
+        Check(['-o', 'fmask=077'], '-rw-------', rwx, rwx, rwx)
+        Check(['-o', 'fmask=0'], '-rw-rw-rw-', rwx, rwx, rwx)
+
+        # With -o enforce_permissions, the symlinks get the bits from the
+        # archive, without the fmask.
+        enforce = ['-o', 'enforce_permissions']
+        Check(enforce, '-rw-r--r--', 'lrwxr-xr-x', 'lrwx------', rwx)
+        Check([*enforce, '-o', 'fmask=077'], '-rw-------', 'lrwxr-xr-x',
+              'lrwx------', rwx)
+        Check([*enforce, '-o', 'fmask=0'], '-rw-r--r--', 'lrwxr-xr-x',
+              'lrwx------', rwx)
+
+
 # Tests the enforce_permissions, nosymlinks and nospecials mount options.
 def TestArchiveWithSpecialFiles():
     zip_name = 'specials.tar'
@@ -2343,7 +2389,7 @@ def TestArchiveWithSpecialFiles():
         'char': {'mode': 'crw-r--r--', 'mtime': 1564833480000000000, 'rdev': 1024},
         'fifo': {'mode': 'prw-r--r--', 'mtime': 1565809123000000000},
         'regular': {'mode': '-rw-r--r--', 'mtime': 1565290018000000000, 'size': 32, 'md5': '456e611a5420b7dd09bae143a7b2deb0'},
-        'symlink': {'mode': 'lrwxr-xr-x', 'mtime': 1564834729000000000, 'target': 'regular'},
+        'symlink': {'mode': 'lrwxrwxrwx', 'mtime': 1564834729000000000, 'target': 'regular'},
     }
 
     MountArchiveAndCheckTree(zip_name, want_tree, want_blocks=8, want_inodes=6)
@@ -2355,7 +2401,7 @@ def TestArchiveWithSpecialFiles():
         'char': {'mode': 'crw-------', 'uid': 0, 'gid': 5, 'rdev': 1024},
         'fifo': {'mode': 'prw-r--r--', 'uid': 1000, 'gid': 1000},
         'regular': {'mode': '-rw-r--r--', 'uid': 1000, 'gid': 1000, 'size': 32, 'md5': '456e611a5420b7dd09bae143a7b2deb0'},
-        'symlink': {'mode': 'lrwxr-xr-x', 'uid': 1000, 'gid': 1000, 'target': 'regular'},
+        'symlink': {'mode': 'lrwxrwxrwx', 'uid': 1000, 'gid': 1000, 'target': 'regular'},
     }
 
     MountArchiveAndCheckTree(
@@ -2414,7 +2460,7 @@ def TestArchiveWithSpecialFiles():
     want_tree = {
         '.': {'ino': 1, 'mode': 'drwxr-xr-x', 'nlink': 2},
         'regular': {'mode': '-rw-r--r--', 'mtime': 1565290018000000000, 'size': 32, 'md5': '456e611a5420b7dd09bae143a7b2deb0'},
-        'symlink': {'mode': 'lrwxr-xr-x', 'mtime': 1564834729000000000, 'target': 'regular'},
+        'symlink': {'mode': 'lrwxrwxrwx', 'mtime': 1564834729000000000, 'target': 'regular'},
     }
 
     MountArchiveAndCheckTree(
@@ -3057,6 +3103,7 @@ TestSpecialPermissions(['-o', 'lazycache'])
 if has_memcache: TestSpecialPermissions(['-o', 'memcache'])
 
 TestArchiveWithSpecialFiles()
+TestSymlinkPermissions()
 
 TestEncryptedArchive()
 TestEncryptedArchive(['-o', 'nocache'])

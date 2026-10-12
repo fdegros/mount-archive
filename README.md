@@ -524,7 +524,9 @@ the owner of the files inside the archive.
 
 You can apply an octal permission mask to directories (`dmask`) and files
 (`fmask`). For example, `-o fmask=077` would remove all permissions for group
-and others from files.
+and others from files. The `fmask` doesn't apply to symbolic links. Their
+permissions are `rwxrwxrwx`, or the ones from the archive with
+`-o enforce_permissions`.
 
 # LOG MESSAGES
 

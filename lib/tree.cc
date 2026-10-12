@@ -622,6 +622,11 @@ void Tree::ProcessEntry(Reader& r, std::string& path, Node* const local_root) {
 
   // Symbolic link.
   if (ft == FileType::Symlink) {
+    // The permissions of a symlink are ignored anyway, so the fmask doesn't
+    // apply to them. They are 0777, like on most filesystems, unless
+    // enforce_permissions asks for the bits from the archive.
+    n->mode = S_IFLNK | (options_.enforce_permissions ? mode & 07777 : 0777);
+
     if (const char* const s =
             archive_entry_symlink_utf8(e) ?: archive_entry_symlink(e)) {
       n->symlink = s;

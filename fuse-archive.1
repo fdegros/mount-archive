@@ -753,6 +753,9 @@ You can apply an octal permission mask to directories (\f[CR]dmask\f[R])
 and files (\f[CR]fmask\f[R]).
 For example, \f[CR]\-o fmask=077\f[R] would remove all permissions for
 group and others from files.
+The \f[CR]fmask\f[R] doesn\(cqt apply to symbolic links.
+Their permissions are \f[CR]rwxrwxrwx\f[R], or the ones from the archive
+with \f[CR]\-o enforce_permissions\f[R].
 .PD
 .SH LOG MESSAGES
 \f[B]fuse\-archive\f[R] records log messages to the system logger
