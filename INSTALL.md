@@ -7,12 +7,13 @@ To build **fuse-archive**, you need the following libraries:
 *   [Boost Intrusive](https://www.boost.org)
 *   [libfuse >= 3.1](https://github.com/libfuse/libfuse)
 *   [libarchive >= 3.7](https://libarchive.org)
+*   [libzip >= 1.0](https://libzip.org)
 
 On Debian systems, you can get these libraries by installing the following
 packages:
 
 ```sh
-$ sudo apt install libboost-container-dev libfuse3-dev libarchive-dev
+$ sudo apt install libboost-container-dev libfuse3-dev libarchive-dev libzip-dev
 ```
 
 For compatibility reasons, **fuse-archive** can optionally use the old FUSE 2

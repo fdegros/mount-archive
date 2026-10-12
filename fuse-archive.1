@@ -157,8 +157,8 @@ are read.
 .PD
 .TP
 \f[B]\-o nobidding\f[R]
-Do not use libarchive\(cqs format bidding system to detect the archive
-format.
+Do not use \f[B]libarchive\f[R]\(cqs format bidding system to detect the
+archive format.
 Instead, strictly rely on the file extension.
 .PD
 .TP
@@ -172,6 +172,11 @@ Using this option effectively disables external programs by setting
 \f[CR]PATH\f[R] to a safe, non\-directory value (\f[CR]/dev/null\f[R]),
 ensuring that only decompression filters implemented natively or
 statically linked into \f[B]libarchive\f[R] are used.
+.PD
+.TP
+\f[B]\-o nolibzip\f[R]
+Do not use \f[B]libzip\f[R] for ZIP archives.
+Only use \f[B]libarchive\f[R].
 .PD
 .TP
 \f[B]\-o unsafe_path\f[R]
@@ -286,6 +291,10 @@ other formats through \c
 .UR https://libarchive.org
 \f[B]libarchive\f[R]
 .UE \c
+\ and \c
+.UR https://libzip.org/
+\f[B]libzip\f[R]
+.UE \c
 \&.
 .PD 0
 .IP \(bu 2
@@ -371,10 +380,14 @@ getting renamed.
 .UR https://libarchive.org
 \f[B]libarchive\f[R]
 .UE \c
-\ library.
+\ and \c
+.UR https://libzip.org
+\f[B]libzip\f[R]
+.UE \c
+\ libraries.
 It supports a wide variety of archive formats and compression methods,
-either natively through \f[B]libarchive\f[R] or by invoking external
-filter programs.
+either natively through \f[B]libarchive\f[R], \f[B]libzip\f[R] or by
+invoking external filter programs.
 .PD
 .PP
 The exact set of supported formats depends on:
@@ -384,13 +397,17 @@ The version and build\-time configuration of the \f[B]libarchive\f[R]
 library.
 .PD 0
 .IP \(bu 2
+The version and build\-time configuration of the \f[B]libzip\f[R]
+library.
+.PD 0
+.IP \(bu 2
 The availability of external filter programs in the sanitized
 \f[CR]PATH\f[R] (see the \f[CR]\-o noexternal\f[R] and
 \f[CR]\-o unsafe_path\f[R] options).
 .PD
 .PP
-To see the version of \f[B]libarchive\f[R] and other libraries linked
-with your build of \f[B]fuse\-archive\f[R], use the
+To see the version of \f[B]libarchive\f[R], \f[B]libzip\f[R] and other
+libraries linked with your build of \f[B]fuse\-archive\f[R], use the
 \f[CR]\-\-version\f[R] option:
 .IP
 .EX
@@ -570,7 +587,7 @@ native archive encryption and GPG\-based encryption.
 Some archive formats (such as ZIP) have native encryption capabilities
 built\-in.
 \f[B]fuse\-archive\f[R] can leverage these when supported by the
-underlying \f[B]libarchive\f[R] library.
+underlying \f[B]libarchive\f[R] and \f[B]libzip\f[R] libraries.
 .PD 0
 .IP \(bu 2
 \f[B]ZIP\f[R]: Supported (understand legacy ZIP encryption as well as
